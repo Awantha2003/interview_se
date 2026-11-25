@@ -5,6 +5,9 @@ import vm from 'node:vm';
 import { labs } from '../public/labs.js';
 import { lessons } from '../public/lessons.js';
 import { checklist } from '../public/checklist.js';
+import { visualLessons } from '../public/visual-lessons.js';
+import { topicGuides } from '../public/topic-guides.js';
+import { starterGuidesSi } from '../public/topic-guides-si.js';
 import { examplesSi } from '../public/examples-si.js';
 const require = createRequire(import.meta.url);
 const vendorPath = new URL('../public/vendor/sql-wasm.js',import.meta.url);
@@ -15,8 +18,16 @@ const runner = readFileSync(new URL('../public/runner.js',import.meta.url),'utf8
 const wasmBinary = readFileSync(new URL('../public/vendor/sql-wasm.wasm',import.meta.url));
 assert.equal(checklist.length,34);
 assert.equal(examplesSi.length,lessons.length);
+assert.equal(topicGuides.length,checklist.length);
+for (const [index,module] of checklist.entries()) {
+  assert.equal(topicGuides[index].length,module.topics.length,module.title);
+  assert.ok(topicGuides[index].every(Boolean), module.title);
+  if (starterGuidesSi[index]) assert.equal(starterGuidesSi[index].length,module.topics.length,module.title);
+}
 for (const [index,lesson] of lessons.entries()) {
   assert.equal(lesson.id,index+1);
+  assert.equal(visualLessons[lesson.id].steps.length,3);
+  assert.ok(visualLessons[lesson.id].steps.every(step=>step.length===3&&step.every(Boolean)));
   assert.ok([lesson.en,lesson.si,lesson.example,lesson.answer,lesson.recall,examplesSi[index]].every(Boolean));
 }
 for (const lab of labs) {

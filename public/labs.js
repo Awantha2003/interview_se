@@ -87,3 +87,17 @@ console.log(twoSum([2, 7, 11, 15], 9));`,out:'[0,1]'},
 console.log(balanced('([])'));
 console.log(balanced('([)]'));`,out:'true\nfalse'}
 ];
+
+labs.unshift({
+  id:'shared-cart',lesson:1,name:'One cart, two screens',lang:'JavaScript',
+  goal:'A customer screen and a cashier screen both use the same cart. Predict the two quantities after the cashier adds two juices.',
+  si:'Customer screen එකයි cashier screen එකයි එකම cart එක භාවිත කරනවා. Cashier juices දෙකක් එකතු කළාම screens දෙකේ quantities guess කරන්න.',
+  code:`const customerCart = { mangoJuices: 1 };
+const cashierCart = customerCart;
+
+cashierCart.mangoJuices += 2;
+
+console.log("Customer sees:", customerCart.mangoJuices);
+console.log("Cashier sees:", cashierCart.mangoJuices);`,
+  out:'Customer sees: 3\nCashier sees: 3',
+});

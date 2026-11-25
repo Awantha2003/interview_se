@@ -1,8 +1,11 @@
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
-import { examplesSi } from './examples-si.js';
 import { concepts } from './concepts.js';
+import { visualLessons } from './visual-lessons.js';
+import { cartDemo, connectCart } from './cart-demo.js';
+import { topicGuides } from './topic-guides.js';
+import { starterGuidesSi } from './topic-guides-si.js';
 import config from './config.js';
 
 const modules = lessons.map(lesson => ({
@@ -45,21 +48,18 @@ const renderCards = () => {
     [item.title,item.question,item.en,item.si,...item.topics].join(' ').toLowerCase().includes(term));
   $('#cards').innerHTML = results.length ? results.map(item => {
     const done = progress['lesson-'+item.id];
-    return `<a class="card" href="#lesson/${item.id}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${escape(item.question)}</p><div class="card-bottom"><span>${item.topics.length ? item.topics.length+' checklist topics' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
+    const matchingTopic = term ? item.topics.findIndex(topic=>topic.toLowerCase().includes(term)) : -1;
+    const href = '#lesson/'+item.id+(matchingTopic>=0?'/topic-'+matchingTopic:'');
+    return `<a class="card" href="${href}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${escape(item.question)}</p><div class="card-bottom"><span>${item.topics.length ? item.topics.length+' topic explanations' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
   }).join('') : '<p class="muted">No matching lessons. Try a different search or filter.</p>';
   $('#result-count').textContent = results.length + ' modules';
 };
 function library() {
   main.innerHTML = `<section class="hero"><div class="shell hero-inner"><div>
-    <div class="eyebrow">Full-stack interview prep</div><h1>Study smarter.<br><span>Interview ready.</span></h1>
-    <p>Learn software engineering in English and Sinhala. Explain the concepts out loud, run code, and remember what to say in your interview.</p>
+    <div class="eyebrow">Full-stack interview prep</div><h1>Learn it.<br><span>Then explain it.</span></h1>
+    <p>Follow a diagram, try a real example, and practice explaining it in English or Sinhala. Start with the foundations or search for a topic.</p>
     <div class="actions"><a class="button primary" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Start studying'}</a><a class="button" href="#lab">Open code lab</a></div>
-    </div><div class="terminal" aria-label="JavaScript example"><header><span class="dots" aria-hidden="true">●●●</span> interview-prep.js</header>
-    <pre><span class="comment">// Predict the output before you run it.</span>
-<span class="keyword">const</span> scores = [60, 82, 91];
-<span class="keyword">const</span> ready = scores.filter(s =&gt; s &gt;= 75);
-
-console.log(ready);</pre><div class="result">› [82, 91]</div></div></div></section>
+    </div><a class="hero-example" href="#lesson/1/shared-cart"><span class="label">Try a visual lesson</span><h2>One juice cart.<br>Two screens.</h2><div class="hero-cart"><span>Customer</span><strong>3 juices</strong><span>Cashier</span></div><p>See how changing one object affects both screens.</p><span class="example-link">Walk through the example</span></a></div></section>
     <div class="shell stats">
       <div class="stat"><strong>${modules.length}</strong><span>Study modules</span></div>
       <div class="stat"><strong>EN + සිං</strong><span>Lesson languages</span></div>
@@ -79,21 +79,58 @@ console.log(ready);</pre><div class="result">› [82, 91]</div></div></div></sec
     renderCards();
   });
 }
-function lesson(item) {
+const topicKey = (id,index) => 'topic-'+id+'-'+index;
+function lesson(item, anchor) {
   const exercises = labs.filter(lab=>lab.lesson===item.id);
   const notes = concepts.filter(([id])=>id===item.id);
   const marked = progress['lesson-'+item.id];
-  main.innerHTML = `<div class="shell page"><a class="back" href="#library">‹ Study library</a><div class="intro">
-    <div class="eyebrow">${escape(group(item.id))} / ${item.priority}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
-    <div class="columns"><div><article class="panel"><h2>Understand the concept</h2>${langText(item.en,item.si)}</article>
-    <article class="panel"><h2>Worked example</h2>${langText(item.example,examplesSi[item.id-1])}${item.diagram ? `<div class="diagram" aria-label="Process flow">${item.diagram.map(escape).map(value=>`<span>${value}</span>`).join('<b aria-hidden="true">›</b>')}</div>` : ''}</article>
-    ${notes.length ? `<section class="panel notes"><h2>Concept notes</h2>${notes.map(([,title,en,si,example])=>`<details class="answer"><summary>${escape(title)}</summary>${langText(en,si)}<p class="muted">${escape(example)}</p></details>`).join('')}</section>` : ''}
-    ${item.topics.length ? `<section class="panel"><h2>Checklist topics</h2><p class="muted">Tick each item when you can explain it and give an example.</p><div class="checklist">${item.topics.map((topic,index)=>{const key='topic-'+item.id+'-'+index;return `<label><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}><span>${escape(topic)}</span></label>`;}).join('')}</div></section>` : ''}</div>
-    <aside><section class="panel callout"><span class="label">Say it in the interview</span><details class="answer"><summary>Reveal sample answer</summary><p>${escape(item.answer)}</p></details></section>
-    <section class="panel"><span class="label">Memory cue</span><p>${escape(item.recall)}</p></section>
-    ${exercises.length ? `<section class="panel"><h2>Practice in the code lab</h2><div class="lesson-links">${exercises.map(lab=>`<a href="#lab/${lab.id}">${escape(lab.name)}</a>`).join('')}</div></section>` : ''}
-    <button id="mark-lesson" class="button ${marked?'':'primary'}" aria-pressed="${Boolean(marked)}">${marked?'✓ Studied':'Mark as studied'}</button>
-    <div class="actions">${item.id>1?`<a class="button" href="#lesson/${item.id-1}">Previous lesson</a>`:''}${item.id<modules.length?`<a class="button" href="#lesson/${item.id+1}">Next lesson</a>`:''}</div></aside></div></div>`;
+  const visual = visualLessons[item.id];
+  const cart = item.id===1;
+  const topics = item.topics.map((title,index)=>{
+    const key=topicKey(item.id,index);
+    const guide=topicGuides[item.id-1][index];
+    const si=starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
+    const copy=si?langText(guide,si):`<p lang="en">${escape(guide)}</p>`;
+    return `<li><details class="topic" id="topic-${index}"><summary><span>${escape(title)}</span><span class="topic-status" aria-hidden="true">${progress[key]?'✓':''}</span></summary>
+      <div class="topic-copy">${copy}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
+  }).join('');
+  main.innerHTML = `<div class="shell page lesson-page"><a class="back" href="#library">‹ Study library</a>
+    <div class="intro lesson-intro"><div class="eyebrow">${escape(group(item.id))}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
+    <div class="lesson-layout"><article class="lesson-content">
+      ${cart?cartDemo():''}
+      <section class="panel walkthrough" id="walkthrough"><span class="label">Worked example</span><h2>${escape(visual.title)}</h2>
+        <ol class="flow-steps">${visual.steps.map(([label,en,si],index)=>`<li><div aria-hidden="true" class="step-dot">${index+1}</div><div class="step-body"><h3>${escape(label)}</h3>${langText(en,si)}</div></li>`).join('')}</ol>
+      </section>
+      <section class="panel" id="explanation"><h2>What’s happening?</h2>${langText(item.en,item.si)}</section>
+      ${cart?`<section class="panel prediction"><h2>What will the customer see?</h2><p>The cashier changes the shared cart from 1 to 3. Choose the customer’s quantity, then run the code to check.</p>
+      <div class="actions" aria-label="Predict the output"><button class="button" data-guess="1" aria-pressed="false">1 juice</button><button class="button" data-guess="3" aria-pressed="false">3 juices</button></div>
+      <p class="prediction-result" role="status"></p><a class="button primary" href="#lab/shared-cart">Edit and run the cart example</a></section>`:''}
+      ${notes.length ? `<section class="panel notes" id="concept-notes"><h2>Concepts to learn</h2>${notes.map(([,title,en,si,example],index)=>`<details class="answer" id="note-${index}"><summary>${escape(title)}</summary>${langText(en,si)}<div class="note-example"><span class="label">Example</span><p>${escape(example)}</p></div></details>`).join('')}</section>` : ''}
+      <section class="panel interview-panel" id="interview-answer"><span class="label">Interview practice</span><h2>Say it in your own words</h2><p>${escape(item.question)}</p>
+      <details class="answer"><summary>Compare with a sample answer</summary><p>${escape(item.answer)}</p></details>
+      <div class="note-example"><span class="label">Memory cue</span><p>${escape(item.recall)}</p></div></section>
+      ${item.topics.length ? `<section class="panel syllabus" id="syllabus"><h2>Study every topic <span id="topic-count"></span></h2><p class="muted">Open a topic, read the explanation, then mark it when you can describe it in your own words.</p><ul class="checklist">${topics}</ul></section>` : ''}
+      <div class="lesson-next">${item.id>1?`<a class="button" href="#lesson/${item.id-1}">Previous lesson</a>`:''}${item.id<modules.length?`<a class="button primary" href="#lesson/${item.id+1}">Next lesson</a>`:''}</div>
+    </article><aside class="lesson-aside"><div class="panel lesson-menu"><h2>In this lesson</h2>
+      <button data-jump="walkthrough">Follow the diagram</button><button data-jump="explanation">Understand the idea</button>
+      ${notes.length?'<button data-jump="concept-notes">Explore the concepts</button>':''}
+      <button data-jump="interview-answer">Practice your answer</button>${item.topics.length?'<button data-jump="syllabus">Study every topic</button>':''}
+      </div>
+      ${exercises.length?`<div class="panel lesson-links"><h2>Try it in code</h2>${exercises.map(lab=>`<a href="#lab/${lab.id}">${escape(lab.name)}</a>`).join('')}</div>`:''}
+      <button id="mark-lesson" class="button ${marked?'':'primary'}" aria-pressed="${Boolean(marked)}">${marked?'✓ Studied':'Mark as studied'}</button>
+    </aside></div></div>`;
+  if (cart) {
+    connectCart($('#shared-cart'),langText);
+    $('.prediction').addEventListener('click',event=>{
+      const choice=event.target.closest('[data-guess]');
+      if (!choice) return;
+      main.querySelectorAll('[data-guess]').forEach(button=>button.setAttribute('aria-pressed',String(button===choice)));
+      const answer=choice.dataset.guess==='3';
+      $('.prediction-result').innerHTML=answer
+        ? langText('3 is right. Both screens read the same cart object.','3 හරි. Screens දෙකම එකම cart object එක කියවනවා.')
+        : langText('Look again at step 3. The cashier updates the object both screens read.','තුන්වැනි පියවර ආයෙ බලන්න. Cashier වෙනස් කරන්නේ දෙන්නාම බලන object එක.');
+    });
+  }
   $('#mark-lesson').addEventListener('click',event=>{
     const key='lesson-'+item.id;
     record(key,!progress[key]);
@@ -101,9 +138,31 @@ function lesson(item) {
     event.target.classList.toggle('primary',!progress[key]);
     event.target.setAttribute('aria-pressed',String(progress[key]));
   });
-  $('.checklist')?.addEventListener('change',event=>{
-    if (event.target.dataset.progress) record(event.target.dataset.progress,event.target.checked);
+  const updateCount = () => {
+    const count=$('#topic-count');
+    if (count) count.textContent=`${item.topics.filter((_,index)=>progress[topicKey(item.id,index)]).length} / ${item.topics.length}`;
+  };
+  const jump = id => {
+    const section=document.getElementById(id);
+    if (!section) return;
+    if (section.tagName==='DETAILS') section.open=true;
+    section.setAttribute('tabindex','-1');
+    section.focus({preventScroll:true});
+    section.scrollIntoView({block:'start'});
+  };
+  $('.lesson-menu').addEventListener('click',event=>{
+    const {jump:id}=event.target.dataset;
+    if (id) jump(id);
   });
+  $('.checklist')?.addEventListener('change',event=>{
+    if (event.target.dataset.progress) {
+      record(event.target.dataset.progress,event.target.checked);
+      event.target.closest('.topic').querySelector('.topic-status').textContent=event.target.checked?'✓':'';
+      updateCount();
+    }
+  });
+  updateCount();
+  if (anchor) requestAnimationFrame(()=>jump(anchor));
 }
 const get = async (url,mode) => {
   const response = await fetch(url);
@@ -265,14 +324,14 @@ async function useAccount(user) {
 }
 function render() {
   finishRun?.();
-  const [page,id]=route();
+  const [page,id,anchor]=route();
   const item=modules.find(lesson=>String(lesson.id)===id);
   const current=page==='lesson'&&item?'library':page==='lab'||page==='review'?page:'library';
   document.querySelectorAll('nav [data-page]').forEach(link=>{
     if (link.dataset.page===current) link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
-  if (page==='lesson'&&item) lesson(item);
+  if (page==='lesson'&&item) lesson(item,anchor);
   else if (page==='lab') labView(id);
   else if (page==='review') review();
   else library();

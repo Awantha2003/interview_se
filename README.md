@@ -23,4 +23,4 @@ The lab runs JavaScript and SQL inside a worker in an opaque-origin iframe. SQL 
 4. Add the production URL in the Supabase Auth URL configuration as the Site URL and an allowed redirect. The email template should include the confirmation URL.
 5. Redeploy, then use **Progress** to request a sign-in link. Guest progress is saved separately on the current device.
 
-The attached internship checklist provides the syllabus. The 34 checklist sections have module-level worked examples, interview answers and memory cues. Supabase access control and retry reliability are additional modules. Individual checklist entries are study targets inside each module.
+The attached internship checklist provides the syllabus. All 34 checklist sections have bilingual worked diagrams, interview answers and memory cues. Supabase access control and retry reliability are additional modules. Every PDF checklist entry has an individual study note. The Foundations modules also have Sinhala topic notes. The first lesson demonstrates shared references with an interactive cart and editable JavaScript.
