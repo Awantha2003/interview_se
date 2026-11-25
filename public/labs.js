@@ -248,3 +248,36 @@ console.log(search(root, 12)); // true: 8 → right → 12
 console.log(search(root, 5));  // false: 8 → left → 3 → missing`,
   out:'true\nfalse',
 });
+
+labs.push({
+  id:'async-order',lesson:9,name:'Check an order with async/await',lang:'JavaScript',
+  goal:'Look up order A12 and missing order B99. Watch what runs while each lookup is waiting.',
+  si:'A12 order එකයි නැති B99 order එකයි හොයන්න. Lookup එක බලාගෙන ඉද්දී තව මොන code එකක් run වෙනවද බලන්න.',
+  code:`function getOrder(id) {
+  // Simulate an API request without using the network.
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (id === 'A12') resolve('Ready');
+      else reject(new Error('Order not found'));
+    }, 25);
+  });
+}
+
+async function showOrder(id) {
+  console.log('Checking ' + id);
+  try {
+    // Only this function waits here. Other JavaScript can keep running.
+    const status = await getOrder(id);
+    console.log(id + ': ' + status);
+  } catch (error) {
+    // A rejected promise jumps to catch.
+    console.log(id + ': ' + error.message);
+  }
+}
+
+const firstLookup = showOrder('A12');
+console.log('The rest of the page can keep working');
+await firstLookup;
+await showOrder('B99');`,
+  out:'Checking A12\nThe rest of the page can keep working\nA12: Ready\nChecking B99\nB99: Order not found',
+});

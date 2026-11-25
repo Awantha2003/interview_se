@@ -36,3 +36,9 @@ codingSteps['bst-search'] = [
   [10,'Compare with the current node and choose one branch.','දැනට node එක එක්ක compare කරලා එක පැත්තක් තෝරන්න.'],
   [17,'Stop at a missing child and test a present and absent key.','Child එකක් නැත්නම් search එක නවත්වන්න. තියෙන අගයක් සහ නැති අගයක් test කරන්න.'],
 ];
+
+codingSteps['async-order'] = [
+  [9,'Return a promise that resolves for A12 and rejects for a missing order.','A12 ට resolve වෙන, order එක නැත්නම් reject වෙන Promise එකක් return කරන්න.'],
+  [21,'Await the lookup in try. Handle a rejection in catch.','try එකේ lookup එක await කරන්න. Reject වුණොත් catch එකේ handle කරන්න.'],
+  [26,'Start the first lookup, run another line, then check a missing ID.','පළමු lookup එක පටන් අරන් තව line එකක් run කරන්න. පස්සේ නැති ID එකක් check කරන්න.'],
+];

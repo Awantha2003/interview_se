@@ -12,6 +12,7 @@ import { codingSteps } from '../public/coding-steps.js';
 import { lessons } from '../public/lessons.js';
 import { checklist } from '../public/checklist.js';
 import { visualLessons } from '../public/visual-lessons.js';
+import { topicScenarios } from '../public/topic-scenarios.js';
 import { topicGuides } from '../public/topic-guides.js';
 import { starterGuidesSi } from '../public/topic-guides-si.js';
 import { examplesSi } from '../public/examples-si.js';
@@ -25,6 +26,7 @@ const wasmBinary = readFileSync(new URL('../public/vendor/sql-wasm.wasm',import.
 assert.equal(checklist.length,34);
 assert.equal(examplesSi.length,lessons.length);
 assert.equal(topicGuides.length,checklist.length);
+assert.equal(topicScenarios.length,checklist.length);
 const topicNames=new Set(checklist.flatMap(module=>module.topics.map(title=>title.toLowerCase())));
 for (const [title,rows] of Object.entries(conceptTables)) {
   assert.ok(topicNames.has(title),title);
@@ -34,6 +36,8 @@ assert.equal(conceptTables['trees and binary search trees'].length,3);
 for (const [index,module] of checklist.entries()) {
   assert.equal(topicGuides[index].length,module.topics.length,module.title);
   assert.ok(topicGuides[index].every(Boolean), module.title);
+  assert.equal(topicScenarios[index].length,module.topics.length,module.title);
+  assert.ok(topicScenarios[index].every(steps=>steps.length===3&&steps.every(Boolean)),module.title);
   for (const [position,title] of module.topics.entries()) {
     const ids=exampleIds(module.id,position,title);
     if (module.id===11||module.id===12) assert.ok(ids.some(id=>reactExamples[id]),title);

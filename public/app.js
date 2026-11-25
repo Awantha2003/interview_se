@@ -10,6 +10,7 @@ import { codingSteps } from './coding-steps.js';
 import { concepts } from './concepts.js';
 import { visualLessons } from './visual-lessons.js';
 import { cartDemo, connectCart } from './cart-demo.js';
+import { topicScenarios, topicScenariosSi } from './topic-scenarios.js';
 import { topicGuides } from './topic-guides.js';
 import { starterGuidesSi } from './topic-guides-si.js';
 import config from './config.js';
@@ -168,6 +169,23 @@ main.addEventListener('toggle',event=>{
   frame.src='/react-preview/'+preview.dataset.preview+'.html';
   mount.append(frame);
 },true);
+function topicDiagram(item,index,title) {
+  if (title==='async/await') return `<figure class="topic-example async-example">
+    <figcaption>Worked example · Checking an order</figcaption>
+    ${langText('The shop looks up a receipt. The async function waits for the lookup, and the rest of the page can still work.','Shop එක order එකක් හොයනවා. Async function එක result එක එනකම් නවතිනවා. ඒ අතරේ page එකේ අනිත් වැඩ දිගටම කරන්න පුළුවන්.')}
+    <div class="async-wait"><code>await getOrder(id)</code></div>
+    <div class="async-branches">
+      <div><span class="label">Promise resolves</span>${langText('A12 exists. The next line in try prints “A12: Ready”.','A12 තියෙනවා. try එකේ ඊළඟ line එකෙන් “A12: Ready” print වෙනවා.')}</div>
+      <div><span class="label">Promise rejects</span>${langText('B99 is missing. Execution jumps to catch and prints “B99: Order not found”.','B99 නැහැ. Code එක catch එකට ගිහින් “B99: Order not found” print කරනවා.')}</div>
+    </div>
+  </figure>`;
+  const steps=topicScenarios[item.id-1][index];
+  const translated=topicScenariosSi[title.toLowerCase()];
+  const labels=['Start','What happens','Result'];
+  return `<figure class="topic-example"><figcaption>Worked example</figcaption>
+    <ol class="topic-diagram">${steps.map((step,i)=>`<li><span class="label">${labels[i]}</span>${translated?langText(step,translated[i]):`<p lang="en">${escape(step)}</p>`}</li>`).join('')}</ol>
+  </figure>`;
+}
 const topicKey = (id,index) => 'topic-'+id+'-'+index;
 function lesson(item, anchor) {
   const reviewExamples = ['reverse','merge-sorted','palindrome','brackets','anagram','event','frequency','sets','sql','missing','duplicate-orders','second-largest','html','two-sum','fizzbuzz','prime','factorial','fibonacci','binary'];
@@ -181,10 +199,10 @@ function lesson(item, anchor) {
   const topics = item.topics.map((title,index)=>{
     const key=topicKey(item.id,index);
     const guide=topicGuides[item.id-1][index];
-    const si=starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
+    const si=title==='async/await' ? 'await එක Promise එකේ result එක එනකම් දැනට තියෙන async function එක නවත්වනවා. Promise එක reject වුණොත් catch එකෙන් error එක handle කරන්න.' : starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
     const copy=si?langText(guide,si):`<p lang="en">${escape(guide)}</p>`;
     return `<li><details class="topic" id="topic-${index}"><summary><span>${escape(title)}</span><span class="topic-status" aria-hidden="true">${progress[key]?'✓':''}</span></summary>
-      <div class="topic-copy">${copy}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
+      <div class="topic-copy">${copy}${topicDiagram(item,index,title)}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
   }).join('');
   main.innerHTML = `<div class="shell page lesson-page"><a class="back" href="#library">‹ Study library</a>
     <div class="intro lesson-intro"><div class="eyebrow">${escape(group(item.id))}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
