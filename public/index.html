@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Study for a full-stack software engineering interview in English and Sinhala. Read, recall and run code.">
+  <title>SE Prep Studio · Full-stack interview practice</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="top">
+    <div class="shell header">
+      <a class="brand" href="#library"><span class="logo">&lt;/&gt;</span><span>SE Prep<span class="brand-accent"> Studio</span></span></a>
+      <nav aria-label="Main navigation">
+        <a data-page="library" href="#library">Library</a>
+        <a data-page="lab" href="#lab">Code lab</a>
+        <a data-page="review" href="#review">Flashcards</a>
+      </nav>
+      <div class="header-actions">
+        <button id="language" class="language" type="button" aria-label="Lesson language">EN + සිං</button>
+        <button id="sync" class="sync" type="button">Progress</button>
+      </div>
+    </div>
+  </header>
+  <main id="content" tabindex="-1"></main>
+  <footer class="shell footer"><a class="brand" href="#library"><span class="logo">&lt;/&gt;</span> SE Prep Studio</a><span>Full-stack software engineering interview prep</span></footer>
+  <dialog id="progress-dialog">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <div id="progress-content"></div>
+  </dialog>
+</body>
+</html>
