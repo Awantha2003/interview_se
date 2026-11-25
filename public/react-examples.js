@@ -7,6 +7,7 @@ export const reactExamples = {
   'props-state': make('Juice card with props and state','Pass a drink name from App, store the local quantity in JuiceCard, then update it from the button.','App එකෙන් drink name එක pass කරන්න. JuiceCard එකේ quantity state තියාගෙන button එකෙන් update කරන්න.','Mango juice stays the same. Add one changes 0 → 1 → 2.',`import { useState } from 'react';
 
 function JuiceCard({ name }) {
+  // name comes from the parent; quantity belongs to this component.
   const [quantity, setQuantity] = useState(0);
   return (
     <>
@@ -32,6 +33,7 @@ const menu = [
 function App() {
   const [query, setQuery] = useState('');
   const [note, setNote] = useState('');
+  // Derive the results from the query instead of storing another state value.
   const visible = menu.filter(item =>
     item.name.toLowerCase().includes(query.toLowerCase())
   );
@@ -84,6 +86,7 @@ function Drink({ name }) {
 }
 
 function App() {
+  // Stable product IDs keep each quantity with its product after reordering.
   const [drinks, setDrinks] = useState([
     { id: 'mango', name: 'Mango' },
     { id: 'lime', name: 'Lime' },
@@ -99,6 +102,7 @@ function App() {
   'route-drinks': make('Choose a drink with a route parameter','Keep a shared app shell, define a dynamic route and read its ID through useParams.','App shell එක තියාගෙන dynamic route එකක් හදන්න. useParams වලින් ID එක කියවන්න.','Click a link to switch drink details inside the same page.',`import { MemoryRouter, Link, Route, Routes, useParams } from 'react-router-dom';
 
 function DrinkDetails() {
+  // The route pattern supplies the current drink ID.
   const { drinkId } = useParams();
   return <p>Selected drink: {drinkId}</p>;
 }
@@ -131,6 +135,7 @@ function fetchStock(store, signal) {
 
 function useStock(store) {
   const [result, setResult] = useState({ status: 'loading' });
+  // A new store selection cancels the previous request.
   useEffect(() => {
     const controller = new AbortController();
     setResult({ status: 'loading' });
@@ -202,6 +207,7 @@ function App() {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState('None');
   const [receipt, setReceipt] = useState(false);
+  // Recalculate only when the search changes.
   const items = useMemo(
     () => drinks.filter(drink => drink.toLowerCase().includes(query.toLowerCase())),
     [query]
@@ -247,6 +253,7 @@ function App() {
 }`),
   'lazy-receipt': make('Load the receipt only when it is opened','Wrap a dynamic import in lazy and show a Suspense fallback if loading takes time. The Receipt module is listed below.','Dynamic import එක lazy වලින් wrap කරන්න. Module එක load වෙද්දී Suspense fallback එක පෙන්වන්න.','Click Open receipt to load and show the receipt module.',`import { lazy, Suspense, useState } from 'react';
 
+// The separate module loads when Receipt is first rendered.
 const Receipt = lazy(() => import('./Receipt.jsx'));
 
 function App() {
@@ -272,6 +279,7 @@ const cart = createSlice({
   initialState: { quantity: 0 },
   reducers: {
     addOne(state) {
+      // Redux Toolkit applies this update immutably to the store.
       state.quantity += 1;
     },
   },

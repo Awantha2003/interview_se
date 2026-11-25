@@ -43,6 +43,7 @@ const byTitle = {
   'frequency counting':['frequency'],
   'hash maps and hash sets':['sets','frequency'],
   'stacks':['brackets'],
+  'trees and binary search trees':['bst-search'],
   'labels, name and value':['html'],
   'keyboard accessibility':['html'],
   'forms and input types':['html'],

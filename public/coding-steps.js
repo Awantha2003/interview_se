@@ -30,3 +30,9 @@ codingSteps['cart-constructor'] = [
   [14,'Add methods that update and describe the current cart.','දැනට තියෙන cart එක update කරන්න සහ විස්තර කරන්න methods දෙන්න.'],
   [21,'Create two objects and change only Nila’s cart.','Objects දෙකක් හදලා Nila ගේ cart එක විතරක් වෙනස් කරන්න.'],
 ];
+
+codingSteps['bst-search'] = [
+  [2,'Build a tree with smaller and larger children.','කුඩා අගය වමටත් ලොකු අගය දකුණටත් දාන්න.'],
+  [10,'Compare with the current node and choose one branch.','දැනට node එක එක්ක compare කරලා එක පැත්තක් තෝරන්න.'],
+  [17,'Stop at a missing child and test a present and absent key.','Child එකක් නැත්නම් search එක නවත්වන්න. තියෙන අගයක් සහ නැති අගයක් test කරන්න.'],
+];

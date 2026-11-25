@@ -7,6 +7,7 @@ export const javaExamples = {
         private int quantity;
         static final int MAX_ITEMS = 20;
 
+        // A new cart starts at zero for this customer.
         Cart(String customer) {
             this.customer = customer;
             this.quantity = 0;
@@ -58,6 +59,7 @@ export const javaExamples = {
             super(destination);
         }
 
+        // Calls through a Delivery reference still use the actual object type.
         @Override
         int fee() {
             return 250;
@@ -96,6 +98,7 @@ export const javaExamples = {
     static class Checkout {
         private final Payment payment;
 
+        // The caller chooses the payment provider.
         Checkout(Payment payment) {
             this.payment = payment;
         }
@@ -115,6 +118,7 @@ export const javaExamples = {
         String first = new String("Mango");
         String second = new String("Mango");
 
+        // == tests object identity; equals checks String content.
         System.out.println(first == second);
         System.out.println(first.equals(second));
         System.out.println(first.hashCode() == second.hashCode());
@@ -132,6 +136,7 @@ class Main {
         Set<String> distinct = new LinkedHashSet<>(drinks);
         Map<String, Integer> totals = new HashMap<>();
 
+        // Merge each scanned drink into its running count.
         for (String drink : drinks) {
             totals.merge(drink, 1, Integer::sum);
         }

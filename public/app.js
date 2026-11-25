@@ -2,6 +2,7 @@ import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
 import { comparisons } from './comparisons.js';
+import { conceptTables } from './concept-tables.js';
 import { reactExamples } from './react-examples.js';
 import { javaExamples } from './java-examples.js';
 import { exampleIds } from './topic-examples.js';
@@ -60,7 +61,7 @@ const renderCards = () => {
     matches(title) ? [{item,title,index,exact:normalizeSearch(title)===term}] : []
   )).sort((a,b)=>Number(b.exact)-Number(a.exact)) : [];
   if (topics.length) {
-    $('#cards').innerHTML = topics.map(({item,title,index})=>`<a class="card topic-card" href="#lesson/${item.id}/topic-${index}"><span class="tag">${escape(item.title)}</span><h3>${escape(title)}</h3><span class="topic-open">${comparisons[title.toLowerCase()]?'Open comparison':'Open topic'}</span></a>`).join('');
+    $('#cards').innerHTML = topics.map(({item,title,index})=>`<a class="card topic-card" href="#lesson/${item.id}/topic-${index}"><span class="tag">${escape(item.title)}</span><h3>${escape(title)}</h3><span class="topic-open">${(comparisons[title.toLowerCase()]||conceptTables[title.toLowerCase()])?'Open comparison':'Open topic'}</span></a>`).join('');
     $('#result-count').textContent = topics.length + (topics.length===1?' topic':' topics');
     return;
   }
@@ -116,7 +117,14 @@ function codingExamples(exercises) {
     </section>`;
 }
 function comparisonTable(title) {
-  const comparison=comparisons[title.toLowerCase()];
+  const key=title.toLowerCase();
+  const concepts=conceptTables[key];
+  if (concepts) return `<div class="comparison-wrap"><table class="comparison comparison-concepts">
+    <caption>${escape(title)}</caption>
+    <thead><tr><th scope="col">Concept</th><th scope="col">How it works</th><th scope="col">Simple example</th></tr></thead>
+    <tbody>${concepts.map(([name,en,si,example])=>`<tr><th scope="row">${escape(name)}</th><td>${langText(en,si)}</td><td>${escape(example)}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+  const comparison=comparisons[key];
   if (!comparison) return '';
   const [first,second,rows,third]=comparison;
   return `<div class="comparison-wrap"><table class="comparison">
@@ -131,8 +139,8 @@ function topicCode(item, index, title) {
     const java=javaExamples[id];
     const lab=labs.find(entry=>entry.id===id);
     if (lab) return `<details class="coding-example"><summary><span>${escape(lab.name)}</span><small>${lab.lang}</small></summary>
-      <div class="coding-body">${langText(lab.goal,lab.si)}${codeSteps(lab)}
-      <details class="coding-solution"><summary>Full code</summary><pre><code>${escape(lab.code)}</code></pre></details>
+      <div class="coding-body">${langText(lab.goal,lab.si)}
+      <pre class="topic-source"><code>${escape(lab.code)}</code></pre>
       <details class="coding-solution"><summary>Expected output</summary><pre><code>${escape(lab.out)}</code></pre></details>
       <div class="actions"><a href="#lab/${id}" class="button primary">Edit and run in the lab</a></div></div></details>`;
     const example=demo??java;

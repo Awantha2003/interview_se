@@ -223,3 +223,28 @@ console.log(nilaCart.summary());
 console.log(samCart.summary());`,
   out:'Nila: 2\nSam: 0',
 });
+
+labs.push({
+  id:'bst-search',lesson:3,name:'Search a binary search tree',
+  lang:'JavaScript',
+  goal:'Find 12 in a tree rooted at 8, then try a missing key.',
+  si:'Root එක 8 වන tree එකේ 12 හොයන්න. ඊට පස්සේ නැති අගයක් try කරන්න.',
+  code:`// Left of 8 is smaller; right of 8 is larger.
+const root = { key: 8, left: { key: 3 }, right: { key: 12 } };
+
+function search(node, target) {
+  while (node) {
+    if (target === node.key) return true;
+
+    // The BST rule tells us which whole branch to skip.
+    node = target < node.key ? node.left : node.right;
+  }
+
+  // No child remains on this path.
+  return false;
+}
+
+console.log(search(root, 12)); // true: 8 → right → 12
+console.log(search(root, 5));  // false: 8 → left → 3 → missing`,
+  out:'true\nfalse',
+});

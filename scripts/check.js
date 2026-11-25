@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { labs } from '../public/labs.js';
+import { conceptTables } from '../public/concept-tables.js';
 import { comparisons } from '../public/comparisons.js';
 import { exampleIds } from '../public/topic-examples.js';
 import { reactExamples } from '../public/react-examples.js';
@@ -24,6 +25,12 @@ const wasmBinary = readFileSync(new URL('../public/vendor/sql-wasm.wasm',import.
 assert.equal(checklist.length,34);
 assert.equal(examplesSi.length,lessons.length);
 assert.equal(topicGuides.length,checklist.length);
+const topicNames=new Set(checklist.flatMap(module=>module.topics.map(title=>title.toLowerCase())));
+for (const [title,rows] of Object.entries(conceptTables)) {
+  assert.ok(topicNames.has(title),title);
+  assert.ok(rows.length>=2 && rows.every(row=>row.length===4&&row.every(Boolean)),title);
+}
+assert.equal(conceptTables['trees and binary search trees'].length,3);
 for (const [index,module] of checklist.entries()) {
   assert.equal(topicGuides[index].length,module.topics.length,module.title);
   assert.ok(topicGuides[index].every(Boolean), module.title);
