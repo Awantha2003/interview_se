@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { labs } from '../public/labs.js';
+import { codingSteps } from '../public/coding-steps.js';
 import { lessons } from '../public/lessons.js';
 import { checklist } from '../public/checklist.js';
 import { visualLessons } from '../public/visual-lessons.js';
@@ -32,6 +33,15 @@ for (const [index,lesson] of lessons.entries()) {
 }
 for (const lab of labs) {
   assert.ok(lessons.some(item=>item.id===lab.lesson));
+  const steps=codingSteps[lab.id];
+  const lines=lab.code.split('\n');
+  assert.equal(steps.at(-1)[0],lines.length,lab.name);
+  let previous=0;
+  for (const [end,en,si] of steps) {
+    assert.ok(end>previous && en && si,lab.name);
+    assert.ok(lines.slice(previous,end).join('').trim(),lab.name);
+    previous=end;
+  }
   if (lab.lang==='HTML') {assert.match(lab.code,/<(form|main)>/);continue;}
   const messages = [];
   const self = {postMessage:message=>messages.push(message)};

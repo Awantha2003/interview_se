@@ -1,6 +1,7 @@
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
+import { codingSteps } from './coding-steps.js';
 import { concepts } from './concepts.js';
 import { visualLessons } from './visual-lessons.js';
 import { cartDemo, connectCart } from './cart-demo.js';
@@ -79,9 +80,31 @@ function library() {
     renderCards();
   });
 }
+function codeSteps(lab) {
+  const lines=lab.code.split('\n');
+  let start=0;
+  return `<ol class="coding-steps">${codingSteps[lab.id].map(([end,en,si])=>{
+    const excerpt=lines.slice(start,end).join('\n').trimEnd();
+    start=end;
+    return `<li>${langText(en,si)}<pre><code>${escape(excerpt)}</code></pre></li>`;
+  }).join('')}</ol>`;
+}
+function codingExamples(exercises) {
+  return `<section class="panel" id="coding-examples"><span class="label">Coding practice</span><h2>Write the code step by step</h2>
+    ${exercises.map((lab,index)=>`<details class="coding-example" ${index===0?'open':''}><summary><span>${escape(lab.name)}</span><small>${lab.lang}</small></summary>
+      <div class="coding-body">${langText(lab.goal,lab.si)}${codeSteps(lab)}
+        <details class="coding-solution"><summary>Full code</summary><pre><code>${escape(lab.code)}</code></pre></details>
+        <details class="coding-solution"><summary>Expected output</summary><pre><code>${escape(lab.out)}</code></pre></details>
+        <div class="actions"><a class="button primary" href="#lab/${lab.id}">Edit and run in the lab</a></div>
+      </div></details>`).join('')}
+    </section>`;
+}
 const topicKey = (id,index) => 'topic-'+id+'-'+index;
 function lesson(item, anchor) {
-  const exercises = labs.filter(lab=>lab.lesson===item.id);
+  const reviewExamples = ['reverse','merge-sorted','palindrome','brackets','anagram','event','frequency','sets','sql','missing','duplicate-orders','second-largest','html','two-sum','fizzbuzz','prime','factorial','fibonacci','binary'];
+  const exercises = item.id===32
+    ? reviewExamples.map(id=>labs.find(lab=>lab.id===id))
+    : labs.filter(lab=>lab.lesson===item.id);
   const notes = concepts.filter(([id])=>id===item.id);
   const marked = progress['lesson-'+item.id];
   const visual = visualLessons[item.id];
@@ -105,6 +128,7 @@ function lesson(item, anchor) {
       ${cart?`<section class="panel prediction"><h2>What will the customer see?</h2><p>The cashier changes the shared cart from 1 to 3. Choose the customer’s quantity, then run the code to check.</p>
       <div class="actions" aria-label="Predict the output"><button class="button" data-guess="1" aria-pressed="false">1 juice</button><button class="button" data-guess="3" aria-pressed="false">3 juices</button></div>
       <p class="prediction-result" role="status"></p><a class="button primary" href="#lab/shared-cart">Edit and run the cart example</a></section>`:''}
+      ${exercises.length?codingExamples(exercises):''}
       ${notes.length ? `<section class="panel notes" id="concept-notes"><h2>Concepts to learn</h2>${notes.map(([,title,en,si,example],index)=>`<details class="answer" id="note-${index}"><summary>${escape(title)}</summary>${langText(en,si)}<div class="note-example"><span class="label">Example</span><p>${escape(example)}</p></div></details>`).join('')}</section>` : ''}
       <section class="panel interview-panel" id="interview-answer"><span class="label">Interview practice</span><h2>Say it in your own words</h2><p>${escape(item.question)}</p>
       <details class="answer"><summary>Compare with a sample answer</summary><p>${escape(item.answer)}</p></details>
@@ -114,7 +138,7 @@ function lesson(item, anchor) {
     </article><aside class="lesson-aside"><div class="panel lesson-menu"><h2>In this lesson</h2>
       <button data-jump="walkthrough">Follow the diagram</button><button data-jump="explanation">Understand the idea</button>
       ${notes.length?'<button data-jump="concept-notes">Explore the concepts</button>':''}
-      <button data-jump="interview-answer">Practice your answer</button>${item.topics.length?'<button data-jump="syllabus">Study every topic</button>':''}
+      ${exercises.length?'<button data-jump="coding-examples">Write the code</button>':''}<button data-jump="interview-answer">Practice your answer</button>${item.topics.length?'<button data-jump="syllabus">Study every topic</button>':''}
       </div>
       ${exercises.length?`<div class="panel lesson-links"><h2>Try it in code</h2>${exercises.map(lab=>`<a href="#lab/${lab.id}">${escape(lab.name)}</a>`).join('')}</div>`:''}
       <button id="mark-lesson" class="button ${marked?'':'primary'}" aria-pressed="${Boolean(marked)}">${marked?'✓ Studied':'Mark as studied'}</button>
@@ -237,9 +261,10 @@ function runLab() {
 function labView(id) {
   const lab = labs.find(item=>item.id===id) ?? labs[0];
   activeLab = lab;
-  main.innerHTML=`<div class="shell page"><a class="back" href="#lesson/${lab.lesson}">‹ Related lesson</a><div class="intro"><div class="eyebrow">Practice</div><h1>Code lab</h1><p>Edit an example, predict the result, then run it in your browser.</p></div>
+  main.innerHTML=`<div class="shell page"><a class="back" href="#lesson/${lab.lesson}/coding-examples">‹ Lesson coding examples</a><div class="intro"><div class="eyebrow">Practice</div><h1>Code lab</h1><p>Edit an example, predict the result, then run it in your browser.</p></div>
     <label class="lab-picker"><span class="label">Choose an example</span><select id="lab-select">${labs.map(item=>`<option value="${item.id}" ${item.id===lab.id?'selected':''}>${escape(item.name)} · ${item.lang}</option>`).join('')}</select></label>
     <div class="panel">${langText(lab.goal,lab.si)}${lab.lang==='SQL'?'<p class="muted">Uses a fresh SQLite database with sample customers and orders on every run.</p>':''}</div>
+    <details class="panel coding-solution"><summary>How to write this example</summary>${codeSteps(lab)}</details>
     <div class="workbench"><section class="panel"><h2><label for="editor">${lab.lang} editor</label></h2><textarea id="editor" class="code" spellcheck="false" maxlength="30000">${escape(lab.code)}</textarea><div class="actions"><button class="button primary" id="run">Run code</button><button class="button" id="reset">Reset example</button></div></section>
     <section class="panel"><h2>Output</h2><p id="lab-status" class="muted" role="status">Ready to run</p><pre id="output" class="output" aria-live="polite"></pre><iframe class="preview" title="HTML preview" id="preview" sandbox="" hidden></iframe><details class="answer"><summary>Show expected output</summary><pre>${escape(lab.out)}</pre></details></section></div></div>`;
   $('#lab-select').onchange=event=>{location.hash='lab/'+event.target.value;};

@@ -101,3 +101,96 @@ console.log("Customer sees:", customerCart.mangoJuices);
 console.log("Cashier sees:", cashierCart.mangoJuices);`,
   out:'Customer sees: 3\nCashier sees: 3',
 });
+
+labs.push(
+  {id:'reverse',lesson:32,name:'Reverse a delivery code',lang:'JavaScript',goal:'Reverse MANGO without changing the original code.',si:'මුල් code එක වෙනස් නොකර MANGO ආපස්සට හරවන්න.',code:`function reverseCode(code) {
+  const characters = Array.from(code);
+  characters.reverse();
+  return characters.join('');
+}
+
+console.log(reverseCode('MANGO'));`,out:'OGNAM'},
+  {id:'frequency',lesson:32,name:'Count fruit orders',lang:'JavaScript',goal:'Count how many times each fruit appears in the order list.',si:'Order list එකේ එක් එක් fruit එක කී වරක් තියෙනවද ගණන් කරන්න.',code:`function countOrders(fruits) {
+  const counts = new Map();
+  for (const fruit of fruits) {
+    counts.set(fruit, (counts.get(fruit) ?? 0) + 1);
+  }
+  return Object.fromEntries(counts);
+}
+
+console.log(countOrders(['mango', 'lime', 'mango']));`,out:'{"mango":2,"lime":1}'},
+  {id:'anagram',lesson:32,name:'Compare two scrambled words',lang:'JavaScript',goal:'Check whether listen and silent contain the same letters.',si:'listen සහ silent වල අකුරු ගණන සහ වර්ග සමානද බලන්න.',code:`function sortedLetters(word) {
+  return [...word.toLowerCase()].sort().join('');
+}
+
+function isAnagram(first, second) {
+  return sortedLetters(first) === sortedLetters(second);
+}
+
+console.log(isAnagram('listen', 'silent'));
+console.log(isAnagram('mango', 'lemon'));`,out:'true\nfalse'},
+  {id:'merge-sorted',lesson:32,name:'Merge two sorted price lists',lang:'JavaScript',goal:'Merge two sorted lists by repeatedly taking the smaller price.',si:'List දෙකේ ඉදිරි prices දෙකෙන් අඩු එක ගනිමින් sorted list එකක් හදන්න.',code:`function mergePrices(first, second) {
+  const merged = [];
+  let i = 0;
+  let j = 0;
+  while (i < first.length && j < second.length) {
+    if (first[i] <= second[j]) merged.push(first[i++]);
+    else merged.push(second[j++]);
+  }
+  return merged.concat(first.slice(i), second.slice(j));
+}
+
+console.log(mergePrices([100, 250, 400], [150, 300]));`,out:'[100,150,250,300,400]'},
+  {id:'missing',lesson:32,name:'Find a missing ticket number',lang:'JavaScript',goal:'Find the one missing number in an otherwise complete range from 1 to n.',si:'1 ඉඳන් n වෙනකම් තියෙන ticket numbers වල නැති එක හොයන්න.',code:`function missingTicket(tickets) {
+  const n = tickets.length + 1;
+  const expected = n * (n + 1) / 2;
+  const actual = tickets.reduce((sum, ticket) => sum + ticket, 0);
+  return expected - actual;
+}
+
+console.log(missingTicket([1, 3, 4, 5]));`,out:'2'},
+  {id:'second-largest',lesson:32,name:'Find the second-highest distinct score',lang:'JavaScript',goal:'Find the second-highest score without counting a tie twice.',si:'Tie එකක් දෙවරක් ගන්නේ නැතුව දෙවැනි වැඩිම score එක හොයන්න.',code:`function secondHighest(scores) {
+  const ranked = [...new Set(scores)].sort((a, b) => b - a);
+  return ranked[1] ?? null;
+}
+
+console.log(secondHighest([95, 95, 81, 70]));
+console.log(secondHighest([95, 95]));`,out:'81\nnull'},
+  {id:'fizzbuzz',lesson:32,name:'Write FizzBuzz in order',lang:'JavaScript',goal:'Print a special label for multiples of 3, 5, or both.',si:'3ට, 5ට, හෝ දෙකටම බෙදෙන numbers වලට label එකක් දෙන්න.',code:`function label(number) {
+  if (number % 15 === 0) return 'FizzBuzz';
+  if (number % 3 === 0) return 'Fizz';
+  if (number % 5 === 0) return 'Buzz';
+  return String(number);
+}
+
+for (let number = 13; number <= 16; number++) {
+  console.log(label(number));
+}`,out:'13\n14\nFizzBuzz\n16'},
+  {id:'prime',lesson:32,name:'Check whether a number is prime',lang:'JavaScript',goal:'Reject small inputs and test divisors only up to the square root.',si:'2ට අඩු values ඉවත් කර square root එක දක්වා divisors බලන්න.',code:`function isPrime(number) {
+  if (!Number.isInteger(number) || number < 2) return false;
+  for (let divisor = 2; divisor * divisor <= number; divisor++) {
+    if (number % divisor === 0) return false;
+  }
+  return true;
+}
+
+console.log(isPrime(29));
+console.log(isPrime(35));`,out:'true\nfalse'},
+  {id:'fibonacci',lesson:32,name:'Build the Fibonacci sequence',lang:'JavaScript',goal:'Start at 0 and 1; each next value is the sum of the previous two.',si:'0 සහ 1 වලින් පටන් ගන්න. ඊළඟ value එක කලින් values දෙකේ එකතුවයි.',code:`function fibonacci(count) {
+  const sequence = [];
+  let previous = 0;
+  let next = 1;
+  while (sequence.length < count) {
+    sequence.push(previous);
+    [previous, next] = [next, previous + next];
+  }
+  return sequence;
+}
+
+console.log(fibonacci(7));`,out:'[0,1,1,2,3,5,8]'},
+  {id:'duplicate-orders',lesson:21,name:'Find repeat customer records',lang:'SQL',goal:'Find customer IDs that appear more than once in the sample orders.',si:'Sample orders වල එක් වරකට වඩා පේන customer IDs හොයන්න.',code:`SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+GROUP BY customer_id
+HAVING COUNT(*) > 1
+ORDER BY customer_id;`,out:'customer_id | order_count\n1 | 2'},
+);

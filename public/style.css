@@ -175,3 +175,13 @@ progress{display:block;width:100%;accent-color:var(--yellow)}
 .topic-copy{padding:0 12px 13px}
 .topic-copy p{font-size:.95rem}
 .topic-copy .topic-mark{display:flex;align-items:center;margin-top:12px;color:#e6d995}
+.coding-example{border:1px solid #39382c;background:#1e1e19;border-radius:8px;margin-top:8px}
+.coding-example>summary,.coding-solution>summary{cursor:pointer;font-weight:650;padding:10px 12px}
+.coding-example>summary small{float:right;color:var(--muted);font-weight:500;margin-left:8px}
+.coding-body{padding:0 12px 14px}
+.coding-steps{margin:15px 0;padding-left:24px}
+.coding-steps li{padding-left:4px;margin-bottom:12px}
+.coding-steps li::marker{color:var(--yellow);font-weight:700}
+.coding-steps pre,.coding-solution pre{border:1px solid var(--line);background:#12120f;padding:10px 12px;border-radius:6px;margin:8px 0;color:#f0e4ba}
+.coding-solution{border:1px solid var(--line);border-radius:6px;margin-top:7px}
+.coding-solution>pre{margin:0 10px 10px}
