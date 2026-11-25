@@ -15,7 +15,9 @@ createServer(async (request, response) => {
     const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
     const file = resolve(root, '.' + (path === '/' ? '/index.html' : path));
     if (!file.startsWith(root + sep) || !(await stat(file)).isFile()) throw new Error();
-    response.writeHead(200, {'Content-Type':types[extname(file)] || 'application/octet-stream'});
+    const headers={'Content-Type':types[extname(file)] || 'application/octet-stream'};
+    if (path.startsWith('/react-preview/')) headers['Access-Control-Allow-Origin']='*';
+    response.writeHead(200, headers);
     createReadStream(file).pipe(response);
   } catch {
     response.writeHead(404).end('File not found');

@@ -185,3 +185,16 @@ progress{display:block;width:100%;accent-color:var(--yellow)}
 .coding-steps pre,.coding-solution pre{border:1px solid var(--line);background:#12120f;padding:10px 12px;border-radius:6px;margin:8px 0;color:#f0e4ba}
 .coding-solution{border:1px solid var(--line);border-radius:6px;margin-top:7px}
 .coding-solution>pre{margin:0 10px 10px}
+.topic-card{min-height:115px}
+.topic-open{color:var(--yellow);font-size:.84rem;margin-top:auto}
+.comparison-wrap{overflow-x:auto;margin:14px 0}
+.comparison{border-collapse:collapse;width:100%;min-width:310px;table-layout:fixed;font-size:.9rem}
+.comparison caption{text-align:left;font-weight:750;color:var(--yellow);margin-bottom:5px}
+.comparison th,.comparison td{border:1px solid #454435;text-align:left;vertical-align:top;padding:8px;overflow-wrap:anywhere}
+.comparison th{background:#2a291c;color:#f1e6a5}
+.comparison th:first-child{width:23%}
+.comparison td p{font-size:inherit}
+.comparison td p+p{margin-top:5px}
+.topic-copy .coding-example{background:#171713}
+.topic-copy .coding-body{padding-top:4px}
+.preview-mount iframe{display:block;border:0;width:100%;min-height:245px;background:#1b1d15;border-radius:0 0 6px 6px}

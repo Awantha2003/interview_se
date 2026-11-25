@@ -194,3 +194,32 @@ GROUP BY customer_id
 HAVING COUNT(*) > 1
 ORDER BY customer_id;`,out:'customer_id | order_count\n1 | 2'},
 );
+
+labs.push({
+  id:'cart-constructor',lesson:2,name:'Create two carts with a JavaScript constructor',
+  lang:'JavaScript',
+  goal:'Start a new cart with a customer name and zero drinks. Add drinks only to the first cart.',
+  si:'Customer name එක සහ drinks 0ක් එක්ක cart එකක් හදන්න. පළමු cart එකට විතරක් drinks එකතු කරන්න.',
+  code:`class Cart {
+  constructor(customer) {
+    this.customer = customer;
+    this.quantity = 0;
+  }
+
+  addDrinks(quantity) {
+    this.quantity += quantity;
+  }
+
+  summary() {
+    return this.customer + ': ' + this.quantity;
+  }
+}
+
+const nilaCart = new Cart('Nila');
+const samCart = new Cart('Sam');
+nilaCart.addDrinks(2);
+
+console.log(nilaCart.summary());
+console.log(samCart.summary());`,
+  out:'Nila: 2\nSam: 0',
+});

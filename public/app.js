@@ -1,6 +1,10 @@
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
+import { comparisons } from './comparisons.js';
+import { reactExamples } from './react-examples.js';
+import { javaExamples } from './java-examples.js';
+import { exampleIds } from './topic-examples.js';
 import { codingSteps } from './coding-steps.js';
 import { concepts } from './concepts.js';
 import { visualLessons } from './visual-lessons.js';
@@ -43,17 +47,29 @@ const glyphs = ['{ }','OOP','DS','O(n)','HTML','CSS','GRID','JS','DOM','TS','JSX
 const route = () => location.hash.slice(1).split('/');
 const doneCount = () => modules.filter(item=>progress['lesson-'+item.id]).length;
 const langText = (en,si) => `${language !== 'si' ? `<p lang="en">${escape(en)}</p>` : ''}${language !== 'en' ? `<p lang="si">${escape(si)}</p>` : ''}`;
+const normalizeSearch = value => value.toLowerCase().replace(/\bversus\b/g,'vs').replace(/[^\p{L}\p{M}\p{N}=]+/gu,' ').trim();
 const renderCards = () => {
-  const term = query.trim().toLowerCase();
-  const results = modules.filter(item => (filter === 'All' || group(item.id) === filter || filter === item.priority) &&
-    [item.title,item.question,item.en,item.si,...item.topics].join(' ').toLowerCase().includes(term));
-  $('#cards').innerHTML = results.length ? results.map(item => {
+  const term = normalizeSearch(query);
+  const words = term.split(' ');
+  const matches = value => {
+    const normalized = normalizeSearch(value);
+    return words.every(word=>normalized.includes(word));
+  };
+  const results = modules.filter(item => filter === 'All' || group(item.id) === filter || filter === item.priority);
+  const topics = term ? results.flatMap(item=>item.topics.flatMap((title,index)=>
+    matches(title) ? [{item,title,index,exact:normalizeSearch(title)===term}] : []
+  )).sort((a,b)=>Number(b.exact)-Number(a.exact)) : [];
+  if (topics.length) {
+    $('#cards').innerHTML = topics.map(({item,title,index})=>`<a class="card topic-card" href="#lesson/${item.id}/topic-${index}"><span class="tag">${escape(item.title)}</span><h3>${escape(title)}</h3><span class="topic-open">${comparisons[title.toLowerCase()]?'Open comparison':'Open topic'}</span></a>`).join('');
+    $('#result-count').textContent = topics.length + (topics.length===1?' topic':' topics');
+    return;
+  }
+  const matching = term ? results.filter(item=>matches([item.title,item.question,item.en,item.si,...item.topics].join(' '))) : results;
+  $('#cards').innerHTML = matching.length ? matching.map(item => {
     const done = progress['lesson-'+item.id];
-    const matchingTopic = term ? item.topics.findIndex(topic=>topic.toLowerCase().includes(term)) : -1;
-    const href = '#lesson/'+item.id+(matchingTopic>=0?'/topic-'+matchingTopic:'');
-    return `<a class="card" href="${href}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${escape(item.question)}</p><div class="card-bottom"><span>${item.topics.length ? item.topics.length+' topic explanations' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
+    return `<a class="card" href="#lesson/${item.id}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${escape(item.question)}</p><div class="card-bottom"><span>${item.topics.length ? item.topics.length+' topic explanations' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
   }).join('') : '<p class="muted">No matching lessons. Try a different search or filter.</p>';
-  $('#result-count').textContent = results.length + ' modules';
+  $('#result-count').textContent = matching.length + ' modules';
 };
 function library() {
   main.innerHTML = `<section class="hero"><div class="shell hero-inner"><div>
@@ -68,7 +84,7 @@ function library() {
       <div class="stat"><strong id="done-total">${doneCount()} / ${modules.length}</strong><span>Modules studied</span></div>
     </div>
     <section class="shell catalog" id="catalog"><div class="section-head"><div><h2>Study library</h2><p id="result-count" class="muted" aria-live="polite"></p></div>
-    <input id="search" class="search" type="search" aria-label="Search topics" placeholder="Search topics, e.g. SQL joins" value="${escape(query)}"></div>
+    <input id="search" class="search" type="search" aria-label="Search topics" placeholder="Search topics, e.g. Props vs state" value="${escape(query)}"></div>
     <div class="filters" aria-label="Filter modules">${['All','Foundations','Frontend','Backend & Data','Engineering','Interview','CORE','CV FOCUS','EXTRA'].map(value=>`<button class="filter" data-filter="${value}" aria-pressed="${filter===value}">${value==='CORE'?'Core':value==='CV FOCUS'?'CV focus':value==='EXTRA'?'Extra':value}</button>`).join('')}</div><div id="cards" class="cards"></div></section>`;
   renderCards();
   $('#search').addEventListener('input',event=>{query=event.target.value;renderCards();});
@@ -99,6 +115,51 @@ function codingExamples(exercises) {
       </div></details>`).join('')}
     </section>`;
 }
+function comparisonTable(title) {
+  const comparison=comparisons[title.toLowerCase()];
+  if (!comparison) return '';
+  const [first,second,rows,third]=comparison;
+  return `<div class="comparison-wrap"><table class="comparison">
+    <caption>${escape(title)}</caption>
+    <thead><tr><th scope="col">Compare</th><th scope="col">${escape(first)}</th><th scope="col">${escape(second)}</th>${third?`<th scope="col">${escape(third)}</th>`: ''}</tr></thead>
+    <tbody>${rows.map(([label,left,right,leftSi,rightSi,last,lastSi])=>`<tr><th scope="row">${escape(label)}</th><td>${langText(left,leftSi)}</td><td>${langText(right,rightSi)}</td>${third?`<td>${langText(last,lastSi)}</td>`: ''}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+function topicCode(item, index, title) {
+  return exampleIds(item.id,index,title).map(id=>{
+    const demo=reactExamples[id];
+    const java=javaExamples[id];
+    const lab=labs.find(entry=>entry.id===id);
+    if (lab) return `<details class="coding-example"><summary><span>${escape(lab.name)}</span><small>${lab.lang}</small></summary>
+      <div class="coding-body">${langText(lab.goal,lab.si)}${codeSteps(lab)}
+      <details class="coding-solution"><summary>Full code</summary><pre><code>${escape(lab.code)}</code></pre></details>
+      <details class="coding-solution"><summary>Expected output</summary><pre><code>${escape(lab.out)}</code></pre></details>
+      <div class="actions"><a href="#lab/${id}" class="button primary">Edit and run in the lab</a></div></div></details>`;
+    const example=demo??java;
+    const testing=title==='React Testing Library basics';
+    const source=testing?example.testApp:example.code;
+    const files=testing?example.files:Object.fromEntries(Object.entries(example.files??{}).filter(([file])=>!file.includes('.test.')));
+    return `<details class="coding-example"><summary><span>${testing?'Test a real button click':escape(example.title)}</span><small>${example.lang}</small></summary>
+      <div class="coding-body">${langText(example.en,example.si)}
+        ${demo?`<details class="coding-solution react-preview" data-preview="${id}"><summary>Try the live preview</summary><div class="preview-mount"></div></details>`:''}
+        ${java?'<p class="muted">Save as Main.java and run <code>java Main.java</code> with a JDK.</p>':''}
+        <details class="coding-solution" open><summary>${testing?'App.jsx':'Full code'}</summary><pre><code>${escape(source)}</code></pre></details>
+        ${Object.entries(files).map(([name,code])=>`<details class="coding-solution"><summary>${escape(name)}</summary><pre><code>${escape(code)}</code></pre></details>`).join('')}
+        <details class="coding-solution"><summary>Expected result</summary><pre><code>${escape(example.output)}</code></pre></details>
+      </div></details>`;
+  }).join('');
+}
+main.addEventListener('toggle',event=>{
+  const preview=event.target;
+  if (!preview.matches?.('.react-preview[open]')) return;
+  const mount=preview.querySelector('.preview-mount');
+  if (mount.firstChild) return;
+  const frame=document.createElement('iframe');
+  frame.title='Interactive React example';
+  frame.setAttribute('sandbox','allow-scripts');
+  frame.src='/react-preview/'+preview.dataset.preview+'.html';
+  mount.append(frame);
+},true);
 const topicKey = (id,index) => 'topic-'+id+'-'+index;
 function lesson(item, anchor) {
   const reviewExamples = ['reverse','merge-sorted','palindrome','brackets','anagram','event','frequency','sets','sql','missing','duplicate-orders','second-largest','html','two-sum','fizzbuzz','prime','factorial','fibonacci','binary'];
@@ -115,7 +176,7 @@ function lesson(item, anchor) {
     const si=starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
     const copy=si?langText(guide,si):`<p lang="en">${escape(guide)}</p>`;
     return `<li><details class="topic" id="topic-${index}"><summary><span>${escape(title)}</span><span class="topic-status" aria-hidden="true">${progress[key]?'✓':''}</span></summary>
-      <div class="topic-copy">${copy}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
+      <div class="topic-copy">${copy}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
   }).join('');
   main.innerHTML = `<div class="shell page lesson-page"><a class="back" href="#library">‹ Study library</a>
     <div class="intro lesson-intro"><div class="eyebrow">${escape(group(item.id))}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
@@ -170,6 +231,8 @@ function lesson(item, anchor) {
     const section=document.getElementById(id);
     if (!section) return;
     if (section.tagName==='DETAILS') section.open=true;
+    const example=section.matches('.topic')&&section.querySelector('.coding-example');
+    if (example) example.open=true;
     section.setAttribute('tabindex','-1');
     section.focus({preventScroll:true});
     section.scrollIntoView({block:'start'});

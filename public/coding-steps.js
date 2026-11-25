@@ -24,3 +24,9 @@ export const codingSteps = {
   fibonacci:[[4,'Start with an empty list and the pair 0 and 1.','හිස් list එකකින් සහ 0, 1 pair එකෙන් පටන් ගන්න.'],[8,'Add the first value, then move the pair forward.','පළමු value එක list එකට දාලා pair එක ඉදිරියට ගෙනියන්න.'],[12,'Return the list and print its first seven values.','List එක return කර පළමු values හත print කරන්න.']],
   'duplicate-orders':[[2,'Read customer IDs from the orders table.','Orders table එකෙන් customer IDs කියවන්න.'],[3,'Group rows by customer ID.','Customer ID අනුව rows group කරන්න.'],[5,'Keep customers with more than one order.','Order එකකට වඩා තියෙන customers විතරක් ගන්න.']],
 };
+
+codingSteps['cart-constructor'] = [
+  [5,'Set the owner and initial quantity when new Cart is called.','new Cart call කළාම owner සහ මුල් quantity එක set කරන්න.'],
+  [14,'Add methods that update and describe the current cart.','දැනට තියෙන cart එක update කරන්න සහ විස්තර කරන්න methods දෙන්න.'],
+  [21,'Create two objects and change only Nila’s cart.','Objects දෙකක් හදලා Nila ගේ cart එක විතරක් වෙනස් කරන්න.'],
+];

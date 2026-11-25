@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { labs } from '../public/labs.js';
+import { comparisons } from '../public/comparisons.js';
+import { exampleIds } from '../public/topic-examples.js';
+import { reactExamples } from '../public/react-examples.js';
+import { javaExamples } from '../public/java-examples.js';
 import { codingSteps } from '../public/coding-steps.js';
 import { lessons } from '../public/lessons.js';
 import { checklist } from '../public/checklist.js';
@@ -23,6 +27,12 @@ assert.equal(topicGuides.length,checklist.length);
 for (const [index,module] of checklist.entries()) {
   assert.equal(topicGuides[index].length,module.topics.length,module.title);
   assert.ok(topicGuides[index].every(Boolean), module.title);
+  for (const [position,title] of module.topics.entries()) {
+    const ids=exampleIds(module.id,position,title);
+    if (module.id===11||module.id===12) assert.ok(ids.some(id=>reactExamples[id]),title);
+    if (/ vs /i.test(title)) assert.ok(comparisons[title.toLowerCase()],title);
+    for (const id of ids) assert.ok(reactExamples[id]||javaExamples[id]||labs.some(lab=>lab.id===id),title);
+  }
   if (starterGuidesSi[index]) assert.equal(starterGuidesSi[index].length,module.topics.length,module.title);
 }
 for (const [index,lesson] of lessons.entries()) {
