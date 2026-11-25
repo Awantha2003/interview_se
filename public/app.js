@@ -117,22 +117,31 @@ function codingExamples(exercises) {
       </div></details>`).join('')}
     </section>`;
 }
+function comparisonMarkup(title,headers,rows,variant='') {
+  return `<div class="comparison-wrap"><table role="table" class="comparison ${variant}">
+    <caption>${escape(title)}</caption>
+    <thead role="rowgroup"><tr role="row">${headers.map(header=>`<th scope="col" role="columnheader">${escape(header)}</th>`).join('')}</tr></thead>
+    <tbody role="rowgroup">${rows.map(([label,...cells])=>`<tr role="row">
+      <th scope="row" role="rowheader">${escape(label)}</th>
+      ${cells.map((cell,index)=>`<td role="cell"><span class="comparison-field" aria-hidden="true">${escape(headers[index+1])}</span>${cell}</td>`).join('')}
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
 function comparisonTable(title) {
   const key=title.toLowerCase();
   const concepts=conceptTables[key];
-  if (concepts) return `<div class="comparison-wrap"><table class="comparison comparison-concepts">
-    <caption>${escape(title)}</caption>
-    <thead><tr><th scope="col">Concept</th><th scope="col">How it works</th><th scope="col">Simple example</th></tr></thead>
-    <tbody>${concepts.map(([name,en,si,example])=>`<tr><th scope="row">${escape(name)}</th><td>${langText(en,si)}</td><td>${escape(example)}</td></tr>`).join('')}</tbody>
-  </table></div>`;
+  if (concepts) {
+    const rows=concepts.map(([name,en,si,example])=>[name,langText(en,si),escape(example)]);
+    return comparisonMarkup(title,['Concept','How it works','Simple example'],rows,'comparison-concepts');
+  }
   const comparison=comparisons[key];
   if (!comparison) return '';
   const [first,second,rows,third]=comparison;
-  return `<div class="comparison-wrap"><table class="comparison">
-    <caption>${escape(title)}</caption>
-    <thead><tr><th scope="col">Compare</th><th scope="col">${escape(first)}</th><th scope="col">${escape(second)}</th>${third?`<th scope="col">${escape(third)}</th>`: ''}</tr></thead>
-    <tbody>${rows.map(([label,left,right,leftSi,rightSi,last,lastSi])=>`<tr><th scope="row">${escape(label)}</th><td>${langText(left,leftSi)}</td><td>${langText(right,rightSi)}</td>${third?`<td>${langText(last,lastSi)}</td>`: ''}</tr>`).join('')}</tbody>
-  </table></div>`;
+  const headers=third?['Compare',first,second,third]:['Compare',first,second];
+  const cells=rows.map(([label,left,right,leftSi,rightSi,last,lastSi])=>[
+    label,langText(left,leftSi),langText(right,rightSi),...(third?[langText(last,lastSi)]:[]),
+  ]);
+  return comparisonMarkup(title,headers,cells);
 }
 function topicCode(item, index, title) {
   return exampleIds(item.id,index,title).map(id=>{
@@ -354,7 +363,7 @@ function labView(id) {
     <label class="lab-picker"><span class="label">Choose an example</span><select id="lab-select">${labs.map(item=>`<option value="${item.id}" ${item.id===lab.id?'selected':''}>${escape(item.name)} · ${item.lang}</option>`).join('')}</select></label>
     <div class="panel">${langText(lab.goal,lab.si)}${lab.lang==='SQL'?'<p class="muted">Uses a fresh SQLite database with sample customers and orders on every run.</p>':''}</div>
     <details class="panel coding-solution"><summary>How to write this example</summary>${codeSteps(lab)}</details>
-    <div class="workbench"><section class="panel"><h2><label for="editor">${lab.lang} editor</label></h2><textarea id="editor" class="code" spellcheck="false" maxlength="30000">${escape(lab.code)}</textarea><div class="actions"><button class="button primary" id="run">Run code</button><button class="button" id="reset">Reset example</button></div></section>
+    <div class="workbench"><section class="panel"><h2><label for="editor">${lab.lang} editor</label></h2><textarea id="editor" class="code" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" maxlength="30000">${escape(lab.code)}</textarea><div class="actions lab-actions"><button class="button primary" id="run">Run code</button><button class="button" id="reset">Reset example</button></div></section>
     <section class="panel"><h2>Output</h2><p id="lab-status" class="muted" role="status">Ready to run</p><pre id="output" class="output" aria-live="polite"></pre><iframe class="preview" title="HTML preview" id="preview" sandbox="" hidden></iframe><details class="answer"><summary>Show expected output</summary><pre>${escape(lab.out)}</pre></details></section></div></div>`;
   $('#lab-select').onchange=event=>{location.hash='lab/'+event.target.value;};
   $('#run').onclick=runLab;

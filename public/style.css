@@ -214,3 +214,57 @@ progress{display:block;width:100%;accent-color:var(--yellow)}
 .async-wait::after{content:"↓";display:block;text-align:center;position:absolute;top:100%;left:0;right:0;color:var(--yellow)}
 .async-branches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 @media(max-width:560px){.topic-diagram{grid-template-columns:1fr;gap:13px}.topic-diagram li:not(:last-child)::after{content:"↓";top:100%;left:50%;transform:translateX(-50%)}.async-branches{grid-template-columns:1fr}}
+
+.comparison-field{display:none}
+.workbench,.columns{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+.workbench{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lab-picker{width:100%}
+
+@media(max-width:700px){
+  .header{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:6px}
+  .header .brand{min-width:0;white-space:normal}
+  .header .logo{flex:0 0 30px;width:30px;height:30px}
+  .header nav{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .header nav a{text-align:center}
+  .header-actions button,.header nav a,.button,.filter,.close{min-height:44px}
+  .close{min-width:44px}
+  .header-actions button{padding-inline:8px}
+  .hero-inner,.workbench,.columns{grid-template-columns:minmax(0,1fr)}
+  .hero-inner{padding-block:30px;gap:20px}
+  .hero h1{font-size:clamp(2.15rem,8.5vw,3.5rem);line-height:1.04;overflow-wrap:anywhere}
+  .hero-example{padding:18px}
+  .catalog,.page{padding-block:28px 40px}
+  .search,.lab-picker{width:100%;max-width:none}
+  .search,select,input[type=email],textarea.code{font-size:1rem}
+  textarea.code{min-height:clamp(180px,40svh,310px);max-width:100%;line-height:1.5}
+  .lab-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px}
+  .lab-actions .button{text-align:center;padding-inline:5px}
+  .panel,.flash .panel{padding:15px}
+  .lesson-content .panel{padding:14px}
+  .page h1,.topic summary,.coding-example summary,.card h3{overflow-wrap:anywhere}
+  .topic summary,.coding-example>summary{padding-block:12px}
+  .topic-mark input{width:18px;height:18px}
+  .topic-copy,.coding-body{padding-inline:10px}
+  .lesson-next,.cart-controls{gap:6px;flex-wrap:wrap}
+  .cart-controls .button{padding-inline:8px}
+  .comparison-wrap{overflow:visible}
+  .comparison,.comparison tbody,.comparison tr,.comparison td,.comparison th{display:block}
+  .comparison{min-width:0}
+  .comparison caption{display:block}
+  .comparison thead{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .comparison tbody{display:grid;gap:9px}
+  .comparison tbody tr{border:1px solid #454435;border-radius:7px}
+  .comparison tbody th:first-child,.comparison tbody td{width:auto;border:0;padding:9px 10px}
+  .comparison tbody th{border-radius:6px 6px 0 0}
+  .comparison tbody td+td{border-top:1px solid #454435}
+  .comparison-field{display:block;font-size:.8rem;font-weight:700;color:#f1e6a5;margin-bottom:2px}
+  .topic-source,.coding-steps pre,.coding-solution pre,.output{max-width:100%;overflow-wrap:anywhere}
+  dialog{max-height:calc(100dvh - 28px);overflow:auto;padding:16px}
+}
+
+@media(max-width:360px){
+  .shell{width:calc(100% - 24px)}
+  .header .brand{gap:5px;font-size:.84rem}
+  .header nav a{padding-inline:5px}
+  .header-actions button{padding-inline:6px;font-size:.81rem}
+}
