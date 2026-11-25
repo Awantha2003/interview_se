@@ -2,6 +2,7 @@ import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
 import { examplesSi } from './examples-si.js';
+import { concepts } from './concepts.js';
 import config from './config.js';
 
 const modules = lessons.map(lesson => ({
@@ -80,11 +81,13 @@ console.log(ready);</pre><div class="result">› [82, 91]</div></div></div></sec
 }
 function lesson(item) {
   const exercises = labs.filter(lab=>lab.lesson===item.id);
+  const notes = concepts.filter(([id])=>id===item.id);
   const marked = progress['lesson-'+item.id];
   main.innerHTML = `<div class="shell page"><a class="back" href="#library">‹ Study library</a><div class="intro">
     <div class="eyebrow">${escape(group(item.id))} / ${item.priority}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
     <div class="columns"><div><article class="panel"><h2>Understand the concept</h2>${langText(item.en,item.si)}</article>
     <article class="panel"><h2>Worked example</h2>${langText(item.example,examplesSi[item.id-1])}${item.diagram ? `<div class="diagram" aria-label="Process flow">${item.diagram.map(escape).map(value=>`<span>${value}</span>`).join('<b aria-hidden="true">›</b>')}</div>` : ''}</article>
+    ${notes.length ? `<section class="panel notes"><h2>Concept notes</h2>${notes.map(([,title,en,si,example])=>`<details class="answer"><summary>${escape(title)}</summary>${langText(en,si)}<p class="muted">${escape(example)}</p></details>`).join('')}</section>` : ''}
     ${item.topics.length ? `<section class="panel"><h2>Checklist topics</h2><p class="muted">Tick each item when you can explain it and give an example.</p><div class="checklist">${item.topics.map((topic,index)=>{const key='topic-'+item.id+'-'+index;return `<label><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}><span>${escape(topic)}</span></label>`;}).join('')}</div></section>` : ''}</div>
     <aside><section class="panel callout"><span class="label">Say it in the interview</span><details class="answer"><summary>Reveal sample answer</summary><p>${escape(item.answer)}</p></details></section>
     <section class="panel"><span class="label">Memory cue</span><p>${escape(item.recall)}</p></section>
@@ -233,7 +236,7 @@ function progressDialog() {
     event.preventDefault();
     const button=event.target.querySelector('button');
     button.disabled=true;
-    const {error}=await client.auth.signInWithOtp({email:$('#email').value,emailRedirectTo:location.origin});
+    const {error}=await client.auth.signInWithOtp({email:$('#email').value,options:{emailRedirectTo:location.origin}});
     $('#sync-note').textContent=error?error.message:'Check your email for a sign-in link.';
     button.disabled=false;
   });
