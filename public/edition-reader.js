@@ -1,6 +1,7 @@
 import { editions } from './editions/index.js';
 import { mountEditionDemo } from './edition-demos.js';
-import { liveLinks, mountSectionTrace, mountWalkthrough, sourceSteps } from './live-visuals.js';
+import { liveLinks, mountLessonPlayer, mountWalkthrough, walkthroughSummary } from './live-visuals.js';
+import { exampleClip, sourceClips } from './live-lessons.js';
 
 export { editions };
 const clean = title => title.toLowerCase().replace(/^\d+\.\s*/,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
@@ -71,11 +72,12 @@ function renderBlocks(blocks,escape,language,practice) {
 export function openEdition(main,item,anchor,{escape,language,progress,record,signal}) {
   const id=item.id;
   const pages=editions[id];
-  const pageMatch=/^(?:pdf|demo)-(\d+)(?:-q)?$/.exec(anchor??'');
+  const pageMatch=/^(?:pdf|demo)-(\d+)(?:-(?:q|motion))?$/.exec(anchor??'');
   const previousTopic=/^topic-(\d+)$/.exec(anchor??'');
   const mapped=previousTopic?editionPageFor(id,item.topics[Number(previousTopic[1])]):null;
   const page=Math.min(Math.max(Number(pageMatch?.[1]??mapped??1),1),pages.length);
   const entry=pages[page-1];
+  const openMotion=anchor?.endsWith('-motion');
   const demo=anchor==='demo'||anchor==='coding-examples'||/^demo-\d+$/.test(anchor??'');
   const source=`/editions/${id}/source.pdf#page=${page}`;
   const route=(number)=>`#lesson/${id}/pdf-${number}`;
@@ -104,7 +106,7 @@ export function openEdition(main,item,anchor,{escape,language,progress,record,si
       <button class="button" id="edition-zoom" type="button" aria-pressed="false">Enlarge diagrams &amp; Sinhala</button></div></div>
       <section class="edition-live">
         ${matchingLive?`<div class="live-topic-links"><span class="label">Live practice</span><div class="actions">${matchingLive}</div></div>`:''}
-        <details class="panel live-walkthrough"><summary>Play this page’s worked example</summary><div id="edition-trace"></div></details>
+        <details class="panel live-walkthrough" ${openMotion?'open':''}>${walkthroughSummary(id,"Play this page’s worked example")}<div id="edition-trace"><p role="status">Loading illustrated example…</p></div></details>
       </section>
       <div class="edition-sheet" id="edition-sheet" aria-busy="true"><p role="status">Loading lesson page…</p></div>
     </section>`}
@@ -121,14 +123,12 @@ export function openEdition(main,item,anchor,{escape,language,progress,record,si
     event.target.textContent=progress[key]?'✓ Studied':'Mark section as studied';
   };
   if (demo) {
-    mountEditionDemo(main.querySelector('#edition-demo'),id,escape);
-    const trace=document.createElement('details');
-    trace.className='panel live-walkthrough';
-    trace.innerHTML='<summary>Play this section demo step by step</summary><div></div>';
-    main.querySelector('#edition-demo').after(trace);
-    trace.addEventListener('toggle',()=>{
-      if(trace.open&&!trace.lastElementChild.firstChild) mountSectionTrace(trace.lastElementChild,id,signal);
-    },{signal});
+    const root=main.querySelector('#edition-demo');
+    let player;
+    mountEditionDemo(root,id,escape,(title,steps,autoplay)=>{
+      player??=mountLessonPlayer(root.querySelector('[data-edition-player]'),{signal,language});
+      player.set(exampleClip({title,section:id,steps:steps.map(message=>({message}))}),{autoplay});
+    });
     return;
   }
   const sheet=main.querySelector('#edition-sheet');
@@ -147,21 +147,22 @@ export function openEdition(main,item,anchor,{escape,language,progress,record,si
   };
   const questionButton=main.querySelector('#edition-question');
   if (questionButton) questionButton.onclick=focusQuestion;
-  fetch(`/editions/${id}/${page}.json`).then(response=>{
+  fetch(`/editions/${id}/${page}.json`,{signal}).then(response=>{
     if (!response.ok) throw new Error('Lesson unavailable');
     return response.json();
   }).then(blocks=>{
     if (!sheet.isConnected) return;
     sheet.innerHTML=renderBlocks(blocks,escape,language,anchor?.endsWith('-q'));
     const trace=main.querySelector('#edition-trace');
-    const figure=blocks.find(([type])=>type==='diagram');
+    const details=trace.parentElement;
     const setup=()=>{
-      if(!trace.parentElement.open||trace.firstChild) return;
-      mountWalkthrough(trace,{title:entry.title,frames:sourceSteps(blocks,entry.title),signal,
-        diagram:figure?scopedSvg(figure[1],'trace-source-'):null});
+      if(!details.open) return;
+      mountWalkthrough(trace,{clips:sourceClips(blocks,entry,id),signal,language,scopeDiagram:scopedSvg});
+      details.removeEventListener('toggle',setup);
     };
-    trace.parentElement.addEventListener('toggle',setup,{signal});
+    details.addEventListener('toggle',setup,{signal});
     setup();
+    if(openMotion) details.scrollIntoView({block:'start'});
     zoom.hidden=!sheet.querySelector('.source-diagram,.source-sinhala');
     sheet.setAttribute('aria-busy','false');
     if (anchor?.endsWith('-q')) focusQuestion();
@@ -169,6 +170,7 @@ export function openEdition(main,item,anchor,{escape,language,progress,record,si
     if (!sheet.isConnected) return;
     sheet.setAttribute('aria-busy','false');
     zoom.hidden=true;
+    main.querySelector('#edition-trace').textContent='The illustrated example could not load. Open the original PDF to see the lesson.';
     sheet.innerHTML=`<p role="alert">The lesson page could not load. <a href="${source}" target="_blank" rel="noopener">Open this page in the original PDF.</a></p>`;
   });
 }

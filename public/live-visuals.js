@@ -2,7 +2,10 @@ import { createPlayer } from './live-player.js';
 import { heapInsertion, heapSeed, pipelineTrace } from './live-models.js';
 import { examplesForTitle, liveByKey, liveCatalog } from './live-catalog.js';
 import { art, drawSystem, systems } from './live-art.js';
-import { sectionDemo } from './edition-demos.js';
+import { exampleClip, lessonProfile } from './live-lessons.js';
+import { editions } from './editions/index.js';
+import { lessons } from './lessons.js';
+import { lessonScene } from './lesson-scene.js';
 
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sectionLink=(id,key,page)=>`#live/${key}${id?'/'+id:''}${page?'/pdf-'+page:''}`;
@@ -107,19 +110,9 @@ function drawTiles(scene,frame) {
   if(frame.output) output.innerHTML=`Output <code>${frame.output.length?esc(frame.output.join(' → ')):'Empty'}</code>`;
 }
 
-function drawFrame(scene,frame,steps,index) {
+function drawFrame(scene,frame) {
   if(frame.nodes) return drawTree(scene,frame);
-  if(frame.items) return drawTiles(scene,frame);
-  const actors=[['laptop','Input'],['gear','Process'],['shield','Result']];
-  const point=steps.length>1?Math.round(index*2/(steps.length-1)):1;
-  drawSystem(scene,{point,detail:'Step '+(index+1),item:frame.output?.at(-1)??'Event'},actors,['parcel','Event']);
-  let current=scene.querySelector('.scene-step-copy');
-  if(!current){
-    current=document.createElement('p');
-    current.className='scene-step-copy';
-    scene.append(current);
-  }
-  current.textContent=frame.output?'Output: '+frame.output.join(' → '):frame.message;
+  if(frame.items) drawTiles(scene,frame);
 }
 const graphPositions={A:[50,14],B:[24,40],C:[76,40],D:[11,74],E:[42,74],F:[84,74]};
 const graphLinks=[['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['E','F']];
@@ -252,63 +245,80 @@ export function mountSimulation(root,key,signal) {
   const body=root.querySelector('[data-live-body]');
   if(key==='heap') return mountHeap(body,signal);
   if(key==='pipeline') return mountPipeline(body,signal);
-  if(systems[key]) return mountStory(body,key,signal);
+  if(Object.hasOwn(systems,key)) return mountStory(body,key,signal);
   const inputs=Object.entries(example.inputs);
   body.innerHTML=`<form class="live-inputs">${inputs.map(([name,input])=>`<label>${esc(input.label)}
     ${input.options?`<select name="${name}">${input.options.map(([value,label],i)=>`<option value="${i}" ${value===input.defaultValue?'selected':''}>${esc(label)}</option>`).join('')}</select>`
     :`<input name="${name}" type="number" required step="1" min="${input.min}" max="${input.max}" value="${input.defaultValue}">`}</label>`).join('')}
     <button class="button primary" type="submit">Run trace</button></form><div data-player></div>`;
-  let frames=[];
   const form=body.querySelector('form');
-  const player=createPlayer(body.querySelector('[data-player]'),{signal,draw(scene,frame,index){
+  const workspace=body.querySelector('[data-player]');
+  const isIllustrated=example.view!=='graph'&&example.view!=='array'&&example.view!=='heap';
+  const player=isIllustrated?mountLessonPlayer(workspace,{signal}):createPlayer(workspace,{signal,draw(scene,frame){
     if(example.view==='graph') drawGraph(scene,frame);
-    else drawFrame(scene,frame,frames,index);
+    else drawFrame(scene,frame);
   }});
   function run(autoplay=false){
     const values=Object.fromEntries(inputs.map(([name,input])=>{
       const control=form.elements[name];
       return [name,input.options?input.options[Number(control.value)][0]:control.valueAsNumber];
     }));
-    frames=example.trace(values);
-    player.set(frames,{autoplay});
+    const frames=example.trace(values);
+    if(isIllustrated){
+      const steps=frames.map(frame=>({...frame,code:frame.code??frame.output?.join(' → ')}));
+      player.set(exampleClip({title:example.title,section:example.section,steps}),{autoplay});
+    } else player.set(frames,{autoplay});
   }
   run();
   form.onsubmit=event=>{event.preventDefault();run(true);};
 }
 
-export function sourceSteps(blocks,title) {
-  const steps=[];
-  for(const [type,text,description] of blocks){
-    if(type==='diagram'&&description) {
-      for(const label of description.split(/ · | → /)) if(label.trim()) steps.push({message:label.trim()});
-      continue;
-    }
-    if(type==='text'||type==='heading') {
-      const parts=text.split('\n');
-      const last=steps.at(-1);
-      if(/^(?:real-world example|expected (?:result|output)|output and analysis|follow-up question|interview (?:question|q\s*&\s*a))\b/i.test(parts[0])){
-        if(parts[0].length>23||parts.length>1) steps.push({message:text});
-        else steps.push({message:parts[0],needsDetail:true});
-      } else if(last?.needsDetail) {
-        last.message+='\n'+text;
-        last.needsDetail=false;
-      }
-    }
-  }
-  if (steps.length>=2) return steps.map(({message})=>({message}));
-  return blocks.filter(([type,text])=>['heading','text','code'].includes(type)&&text.trim())
-    .map(([type,message])=>({message,code:type==='code'})).slice(0,20)
-    .concat(steps.length?[]:[{message:`Review the source lesson for ${title}.`}]);
+export function walkthroughSummary(section,title) {
+  return `<summary class="scene-summary">${art(lessonProfile(section).token)}<span class="scene-summary-text"><strong>${esc(title)}</strong><small>Watch with 3D illustrations</small></span></summary>`;
 }
 
-export function mountWalkthrough(root,{title,frames,signal,diagram}) {
-  root.innerHTML=`<p class="label">Guided walkthrough</p><h2>${esc(title)}</h2>
-  <p lang="si">Play හෝ Next step ඔබලා example එක පියවරෙන් පියවර බලන්න.</p>
-  ${diagram?`<div class="live-source-figure">${diagram}</div>`:''}<div data-player></div>`;
-  const player=createPlayer(root.querySelector('[data-player]'),{signal,draw(scene,frame,index){
-    drawFrame(scene,frame,frames,index);
+export function mountLessonPlayer(root,{signal,language}={}) {
+  let clip;
+  let draw;
+  let reflow;
+  const player=createPlayer(root,{signal,draw(scene,frame,index){
+    if(clip.kind==='tiles') {
+      drawTiles(scene,frame);
+      return;
+    }
+    draw??=lessonScene(scene,clip);
+    reflow=draw(frame,index);
   }});
-  player.set(frames.length?frames:[{message:title}]);
+  const observer=new ResizeObserver(()=>reflow?.());
+  const scene=root.querySelector('.live-scene');
+  observer.observe(scene);
+  signal?.addEventListener('abort',()=>observer.disconnect(),{once:true});
+  return {
+    set(next,{autoplay=false}={}) {
+      clip={...next,language};
+      draw=undefined;
+      reflow=undefined;
+      scene.replaceChildren();
+      player.set(clip.frames,{autoplay});
+    },
+  };
+}
+
+export function mountWalkthrough(root,{clips,signal,language,scopeDiagram}) {
+  root.innerHTML=`${clips.length>1?`<label class="lesson-clip-picker"><span>Choose an illustrated example</span>
+    <select aria-label="Choose an illustrated example">${clips.map((clip,index)=>`<option value="${index}">${esc(clip.title)}</option>`).join('')}</select>
+    </label>`:''}<div data-player></div><div data-diagram></div>`;
+  const select=root.querySelector('select');
+  const player=mountLessonPlayer(root.querySelector('[data-player]'),{signal,language});
+  const diagram=root.querySelector('[data-diagram]');
+  const show=index=>{
+    const clip=clips[index];
+    player.set(clip);
+    diagram.innerHTML=clip.diagram&&scopeDiagram?`<details class="lesson-source-diagram"><summary>See the original diagram</summary>
+      <figure class="live-source-figure" aria-label="${esc(clip.diagram.description)}">${scopeDiagram(clip.diagram.svg,'trace-source-')}</figure></details>`:'';
+  };
+  show(0);
+  if(select) select.onchange=()=>show(Number(select.value));
 }
 
 export function liveLinks(title,section,page) {
@@ -316,13 +326,40 @@ export function liveLinks(title,section,page) {
     `<a class="button" href="${sectionLink(section,example.key,page)}">${esc(example.title)}</a>`).join('');
 }
 
+function mountLessonFinder(root) {
+  const section=root.querySelector('select');
+  const page=root.querySelector('[data-lesson-pages]');
+  const link=root.querySelector('a');
+  const updateLink=()=>{link.href='#lesson/'+section.value+(page.value?'/pdf-'+page.value+'-motion':'/walkthrough-motion');};
+  const updatePages=()=>{
+    const entries=editions[section.value];
+    page.innerHTML=entries?.map((entry,index)=>`<option value="${index+1}">${index+1} · ${esc(entry.title)}</option>`).join('')??'';
+    page.parentElement.hidden=!entries;
+    if(entries){
+      const firstLesson=entries.findIndex(entry=>entry.kind==='Lesson');
+      page.selectedIndex=Math.max(0,firstLesson);
+    }
+    updateLink();
+  };
+  section.onchange=updatePages;
+  page.onchange=updateLink;
+  updatePages();
+}
+
 export function openLive(main,key,from,sourcePage,signal) {
-  const example=liveByKey[key];
+  const example=Object.hasOwn(liveByKey,key)?liveByKey[key]:null;
   if(!example) {
     main.innerHTML=`<div class="shell page"><div class="intro"><div class="eyebrow">Practice</div><h1>Live visualizations</h1>
-      <p>Change the input, then play or step through the result.</p></div><div class="cards">
-      ${liveCatalog.map(item=>`<a class="card live-card" href="${sectionLink(null,item.key)}"><div class="live-card-art">${art(item.key==='jwt'||item.key==='offboarding'?'badge':item.key==='pipeline'?'parcel':item.view==='heap'||item.view==='array'?'orb':'gear')}</div><h3>${esc(item.title)}</h3><p lang="si">${esc(item.si)}</p><span class="topic-open">Open visualization</span></a>`).join('')}
+      <p>Choose a lesson or change the inputs in an interactive simulation.</p></div>
+      <section class="panel live-finder"><h2>Find an illustrated lesson</h2><div class="live-inputs">
+        <label><span>Section</span><select aria-label="Section">${lessons.map(item=>`<option value="${item.id}">${item.id} · ${esc(item.title)}</option>`).join('')}</select></label>
+        <label><span>Lesson page</span><select aria-label="Lesson page" data-lesson-pages></select></label>
+        <a class="button primary" href="#lesson/1/pdf-1-motion">Open animation</a>
+      </div></section>
+      <h2 class="live-gallery-title">Interactive simulations</h2><div class="cards">
+      ${liveCatalog.map(item=>`<a class="card live-card" href="${sectionLink(null,item.key)}"><div class="live-card-art">${art(item.key==='jwt'||item.key==='offboarding'?'badge':item.key==='pipeline'?'parcel':item.view==='heap'||item.view==='array'?'orb':lessonProfile(item.section).token)}</div><h3>${esc(item.title)}</h3><p lang="si">${esc(item.si)}</p><span class="topic-open">Open visualization</span></a>`).join('')}
     </div></div>`;
+    mountLessonFinder(main.querySelector('.live-finder'));
     return;
   }
   const section=String(from??'').match(/^\d{1,2}$/)?Number(from):example.section;
@@ -330,22 +367,4 @@ export function openLive(main,key,from,sourcePage,signal) {
   main.innerHTML=`<div class="shell page"><div class="live-page-links"><a class="back" href="#live">‹ Live visualizations</a><a class="back" href="#lesson/${section}${origin}">${origin?'Back to source lesson':'Related section'}</a></div>
     <div class="intro"><div class="eyebrow">Live visualization</div><h1>${esc(example.title)}</h1></div><section class="panel live-workspace" data-simulation></section></div>`;
   mountSimulation(main.querySelector('[data-simulation]'),key,signal);
-}
-
-export function mountSectionTrace(root,id,signal) {
-  const example=sectionDemo(id);
-  if(!example) return;
-  root.innerHTML=`<p class="label">Guided walkthrough</p><h2>${esc(example.title)}</h2><form class="live-inputs">
-    <label>${esc(example.label)}<select>${example.choices.map(([,name],i)=>`<option value="${i}">${esc(name)}</option>`).join('')}</select></label>
-    <button class="button primary" type="submit">Run trace</button></form><div data-player></div>`;
-  const form=root.querySelector('form');
-  const select=form.querySelector('select');
-  let frames=[];
-  const player=createPlayer(root.querySelector('[data-player]'),{signal,draw(scene,frame,index){drawFrame(scene,frame,frames,index);}});
-  function run(autoplay) {
-    frames=example.trace(example.choices[Number(select.value)][0]).map(message=>({message}));
-    player.set(frames,{autoplay});
-  }
-  run(false);
-  form.onsubmit=event=>{event.preventDefault();run(true);};
 }

@@ -16,6 +16,46 @@ export const liveCatalog = [
     match:/\bheap(?:s|ify)?\b|priority queue/i,view:'heap'},
   {key:'pipeline',title:'CI/CD pipeline',si:'Build, tests, release gate සහ deploy එක හරහා production වෙනස් වෙන හැටි බලන්න.',section:28,
     match:/\bCI\s*(?:vs|\/|and)\s*CD\b|github actions|(?:build,?\s*)?test and deploy pipeline|continuous integration|deployment pipeline/i,view:'pipeline'},
+  {key:'constructor',title:'From constructor arguments to a cart object',si:'අලුත් cart එකට customer ID එකයි මුල් quantity එකයි set වෙන හැටි බලන්න.',section:2,
+    match:/constructors?/i,inputs:{customer:choices('Customer ID',['C-12','C-43'])},
+    trace:({customer})=>[
+      {label:'Caller',message:'The caller supplies customer ID '+customer+'.',si:'Caller එක customer ID '+customer+' එක ලබා දෙනවා.',code:'new Cart("'+customer+'")'},
+      {label:'Constructor',message:'Initialize the new instance with the supplied customer ID and a quantity of zero.',si:'අලුත් instance එකේ customer ID එක දාලා quantity එක 0 කරනවා.',code:'this.customerId = customerId;\nthis.quantity = 0;'},
+      {label:'New cart',message:'The caller receives the new cart object.',si:'Caller එකට අලුත් cart object එක ලැබෙනවා.',code:JSON.stringify({customerId:customer,quantity:0},null,2)},
+    ]},
+  {key:'box-sizing',title:'Measure a CSS content box and border box',si:'CSS width එක content එකටද මුළු box එකටද apply වෙනවද කියලා බලන්න.',section:6,
+    match:/box.sizing|box model/i,inputs:{mode:choices('Box sizing',['content-box','border-box']),width:number('CSS width (px)',200,100,400)},
+    trace:({mode,width})=>{
+      const content=mode==='content-box'?width:width-36;
+      return [
+        {label:'CSS declaration',message:'Set width, padding and border for the card.',si:'Card එකට width, padding සහ border දානවා.',code:`width: ${width}px;\npadding: 16px;\nborder: 2px solid;\nbox-sizing: ${mode};`},
+        {label:'Browser computes',message:'Left and right padding plus both borders use 36 px. Content width is '+content+' px.',si:'දෙපැත්තේ padding සහ borders එකතුව 36 px. Content width එක '+content+' px.'},
+        {label:'Rendered box',message:'The total outer width is '+(content+36)+' px.',si:'Border එකත් ඇතුළුව පළල '+(content+36)+' px.',state:[['Content',content+' px'],['Padding + border','36 px'],['Total',content+36+' px']]},
+      ];
+    }},
+  {key:'group-by',title:'Filter and group SQL rows',si:'WHERE එකෙන් rows තෝරලා GROUP BY එකෙන් groups හදනවා. HAVING එකෙන් groups filter කරනවා.',section:21,
+    match:/group by|\bhaving\b|aggregate functions/i,inputs:{minimum:number('Minimum paid orders',2,1,4)},
+    trace:({minimum})=>{
+      const orders=[['Nila','paid'],['Nila','paid'],['Sam','paid'],['Sam','pending']];
+      const paid=orders.filter(([,state])=>state==='paid');
+      const counts=Object.entries(paid.reduce((total,[name])=>({...total,[name]:(total[name]??0)+1}),{}));
+      const result=counts.filter(([,count])=>count>=minimum);
+      return [
+        {label:'WHERE',message:'Keep the '+paid.length+' paid order rows.',si:'Paid orders '+paid.length+' ඉතුරු වෙනවා.',state:paid},
+        {label:'GROUP BY',message:'Group paid rows by customer and count them.',si:'Customer අනුව එකතු කරලා paid orders ගණන් කරනවා.',state:counts},
+        {label:'HAVING',message:result.length?'Keep groups that have '+minimum+' or more paid orders.':'No customer has '+minimum+' paid orders.',si:'Paid orders '+minimum+'ක් හෝ ඊට වැඩි groups විතරක් ඉතුරු වෙනවා.',state:result.length?result:[['Result','No rows']]},
+      ];
+    }},
+  {key:'form-validation',title:'Send an HTML form through browser validation',si:'Email එක valid නම් submit වෙනවා. වැරදි නම් browser එක field එකේම error එක පෙන්වනවා.',section:5,
+    match:/form validation|constraint validation|required and pattern/i,inputs:{input:choices('Email field',[['','Empty field'],['nila','Missing @'],['nila@example.com','Valid email']])},
+    trace:({input})=>{
+      const valid=input.includes('@');
+      return [
+        {label:'Email field',message:input?'Enter '+input+'.':'Leave the required field empty.',si:input?'Email field එකට '+input+' දානවා.':'අනිවාර්ය email field එක හිස්ව තියෙනවා.',code:'<input type="email" name="email" required>'},
+        {label:'Browser validates',message:input?valid?'The email passes the format check.':'Browser reports an email format error.':'Browser reports a missing required value.',si:valid?'Email format check එක pass වෙනවා.':'Email field එකේ error එක browser එක පෙන්වනවා.'},
+        {label:valid?'Form submission':'Submission blocked',message:valid?'The form can submit its email value.':'The form stays on screen so the user can fix the field.',si:valid?'Email value එකත් එක්ක form එක submit වෙනවා.':'Field එක හදනකම් form එක submit වෙන්නේ නැහැ.'},
+      ];
+    }},
   {key:'search',title:'Linear and binary search',si:'Target එක හොයද්දී candidate range එක වෙනස් වෙන හැටි බලන්න.',section:4,match:/binary search|linear search|best, average and worst/i,view:'array',
     inputs:{target:number('Target',10,-50,100),mode:choices('Search',['Binary','Linear'])},
     trace:({target,mode})=>searchTrace(shared,target,{binary:mode==='Binary'})},
@@ -77,7 +117,7 @@ export const liveCatalog = [
   {key:'retry',title:'Retry with the same operation identity',si:'First response එක timeout වුණත් එකම ID එකෙන් retry කරලා duplicate work නවත්වන්න.',section:36,match:/retries and timeouts|reliable apis|idempotent methods/i,
     inputs:{outcome:choices('First response',[['received','Delivered'],['lost','Timed out after save']])},
     trace:({outcome})=>words(['Send booking request with key K1.','Server stores the booking and result for K1.',outcome==='lost'?'Response times out. Retry with K1 → return the stored result.':'Client receives the initial result. No retry needed.'])},
-  {key:'props-state',title:'React props and state across renders',si:'Parent prop එක සහ component state එකෙන් render එකට ලැබෙන වෙනස බලන්න.',section:11,match:/props vs state|rendering and re.rendering|functional updates|useState/i,
+  {key:'props-state',title:'React props and state across renders',si:'Parent prop එක සහ component state එකෙන් render එකට ලැබෙන වෙනස බලන්න.',section:11,view:'array',match:/props vs state|rendering and re.rendering|functional updates|\buseState\b/i,
     inputs:{action:choices('Action',[['count','Click add twice'],['rename','Parent changes label']])},
     trace:({action})=>{
       const before={name:'Mango juice',count:0};
@@ -88,7 +128,7 @@ export const liveCatalog = [
         {items:[after.name,after.count],message:`React renders ${after.name} with count ${after.count}.`},
       ];
     }},
-  {key:'boundaries',title:'Run boundary-value tests',si:'Allowed range එකේ සීමාවට ඇතුළේ සහ පිට inputs run කරන්න.',section:26,match:/boundary value|equivalence partition|tdd|test.driven development/i,view:'array',
+  {key:'boundaries',title:'Run boundary-value tests',si:'Allowed range එකේ සීමාවට ඇතුළේ සහ පිට inputs run කරන්න.',section:26,match:/boundary value|equivalence partition|\btdd\b|test.driven development/i,view:'array',
     inputs:{implementation:choices('Implementation',[['correct','Accept 1 through 10'],['off','Bug: rejects 10']])},
     trace:({implementation})=>{
       const results=[];
@@ -112,7 +152,7 @@ export const liveCatalog = [
         {items:sorted.slice((page-1)*2,page*2),message:`Return page ${page} with up to two orders.`},
       ];
     }},
-  {key:'join',title:'Match customers to their orders',si:'INNER JOIN එකෙන් matches පමණයි. LEFT JOIN එකෙන් order නැති customer එකත් තියාගන්නවා.',section:21,match:/(?:inner|left|right|cross|outer).*join|joins/i,
+  {key:'join',title:'Match customers to their orders',si:'INNER JOIN එකෙන් matches පමණයි. LEFT JOIN එකෙන් order නැති customer එකත් තියාගන්නවා.',section:21,view:'array',match:/\b(?:inner|left|right|cross|outer)\b.*\bjoin\b|\bjoins\b/i,
     inputs:{kind:choices('Join',['INNER','LEFT'])},
     trace:({kind})=>{
       const customers=[[1,'Nila'],[2,'Sam'],[3,'Ravi']];
@@ -154,7 +194,7 @@ export const liveCatalog = [
       frames.push({items,message:'Every mirrored pair matched. Return true.'});
       return frames;
     }},
-  {key:'dns',title:'Trace DNS and a browser request',si:'Hostname එක IP address එකක් වෙලා connection එකට යන හැටි බලන්න.',section:27,match:/dns|http request flow|ip addresses and ports/i,
+  {key:'dns',title:'Trace DNS and a browser request',si:'Hostname එක IP address එකක් වෙලා connection එකට යන හැටි බලන්න.',section:27,match:/\bdns\b|http request flow|ip addresses and ports/i,
     inputs:{state:choices('DNS lookup',[['hit','Cached record'],['miss','No cached record']])},
     trace:({state})=>words(['Browser needs the address for shop.example.',state==='hit'?'Resolver finds a valid cached record.':'Resolver obtains an answer and caches it for its TTL.','Browser uses the resulting address for the HTTPS connection.'])},
   {key:'load-balancer',title:'Route requests around an unhealthy instance',si:'Health check fail වුණාම healthy instances වලට request බෙදන හැටි බලන්න.',section:29,match:/load balancing|load balancer|health checks/i,view:'array',

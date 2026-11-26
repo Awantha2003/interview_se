@@ -153,21 +153,14 @@ const demos = {
 
 };
 
-export function sectionDemo(section) {
-  const demo=demos[section];
-  if (!demo) return null;
-  const [title,en,si,label,choices,run]=demo;
-  return {title,en,si,label,choices,trace:input=>run(input,0)};
-}
-
-export function mountEditionDemo(root,section,escape) {
+export function mountEditionDemo(root,section,escape,showScene) {
   const [title,en,si,label,choices,run]=demos[section];
   let count=0;
   root.innerHTML=`<h2>${escape(title)}</h2><p>${escape(en)}</p><p lang="si">${escape(si)}</p>
     <fieldset><legend>${escape(label)}</legend><div class="actions edition-demo-controls">
       ${choices.map(([,name],i)=>`<button type="button" class="button" data-choice="${i}" aria-pressed="${i===0}">${escape(name)}</button>`).join('')}
       ${section===8||section===11?'<button type="button" class="button" data-reset>Reset</button>':''}
-    </div></fieldset><ol class="edition-flow" aria-live="polite"></ol>`;
+    </div></fieldset><div data-edition-player></div><ol class="edition-flow"></ol>`;
   const list=root.querySelector('.edition-flow');
   const show=(index,advance=false)=>{
     const input=choices[index][0];
@@ -176,11 +169,12 @@ export function mountEditionDemo(root,section,escape) {
     if (advance && accumulating) count+=input;
     root.querySelectorAll('[data-choice]').forEach(button=>button.setAttribute('aria-pressed',String((advance||!accumulating)&&Number(button.dataset.choice)===index)));
     list.innerHTML=steps.map(step=>`<li>${escape(step)}</li>`).join('');
+    showScene(title,steps,advance);
   };
   show(0);
   root.addEventListener('click',event=>{
     const button=event.target.closest('button');
-    if (!button) return;
+    if (!button?.matches('[data-choice],[data-reset]')) return;
     if (button.hasAttribute('data-reset')) {
       count=0;
       show(0);

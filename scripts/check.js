@@ -4,6 +4,8 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { heapSeed, heapInsertion, pipelineTrace } from '../public/live-models.js';
 import { liveCatalog } from '../public/live-catalog.js';
+import { editions } from '../public/editions/index.js';
+import { sourceClips } from '../public/live-lessons.js';
 import { labs } from '../public/labs.js';
 import { conceptTables } from '../public/concept-tables.js';
 import { comparisons } from '../public/comparisons.js';
@@ -99,4 +101,18 @@ for (const example of liveCatalog.filter(example=>example.trace)) {
   const values=Object.fromEntries(Object.entries(example.inputs).map(([key,input])=>[key,input.defaultValue]));
   assert.ok(example.trace(values).every(frame=>frame.message),example.key);
 }
+let pages=0;
+let diagrams=0;
+for(const [section,entries] of Object.entries(editions)) {
+  for(const [index,entry] of entries.entries()) {
+    const label=section+'/'+(index+1);
+    const blocks=JSON.parse(readFileSync(new URL('../public/editions/'+label+'.json',import.meta.url),'utf8'));
+    const clips=sourceClips(blocks,entry,Number(section));
+    assert.ok(clips.length&&clips.every(clip=>clip.frames.length>=2&&clip.frames.every(frame=>frame.message)),label);
+    assert.equal(clips.filter(clip=>clip.diagram).length,entry.diagrams,label);
+    diagrams+=entry.diagrams;
+    pages++;
+  }
+}
+console.log(`Verified playable scenes for ${pages} PDF pages and ${diagrams} source diagrams.`);
 console.log(`Verified ${lessons.length} complete module records, ${checklist.reduce((total,item)=>total+item.topics.length,0)} checklist entries and ${labs.length} lab fixtures.`);

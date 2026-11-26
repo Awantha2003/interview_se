@@ -1,4 +1,5 @@
-import { liveLinks, mountWalkthrough, openLive } from './live-visuals.js';
+import { liveLinks, mountWalkthrough, openLive, walkthroughSummary } from './live-visuals.js';
+import { exampleClip } from './live-lessons.js';
 import { editionQuestionIndex, editions, openEdition } from './edition-reader.js';
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
@@ -120,10 +121,32 @@ function codeSteps(lab) {
     return `<li>${langText(en,si)}<pre><code>${escape(excerpt)}</code></pre></li>`;
   }).join('')}</ol>`;
 }
+function codeClip(lab) {
+  const lines=lab.code.split('\n');
+  let start=0;
+  const steps=codingSteps[lab.id].map(([end,message,si])=>{
+    const code=lines.slice(start,end).join('\n').trimEnd();
+    const label='Code · lines '+(start+1)+'–'+end;
+    start=end;
+    return {label,message,si,code};
+  });
+  steps.push({label:'Expected output',message:'Compare this with the result when you run the starter code.',
+    si:'Starter code එක run කරලා ලැබෙන output එකත් එක්ක මේක compare කරන්න.',code:lab.out});
+  return exampleClip({title:lab.name,section:lab.lesson,steps,kind:'code'});
+}
+
+function bindLessonClips(details,clips,signal) {
+  details.addEventListener('toggle',()=>{
+    if(details.open&&!details.lastElementChild.firstChild) {
+      mountWalkthrough(details.lastElementChild,{clips,signal,language});
+    }
+  },{signal});
+}
+
 function codingExamples(exercises) {
   return `<section class="panel" id="coding-examples"><span class="label">Coding practice</span><h2>Write the code step by step</h2>
     ${exercises.map((lab,index)=>`<details class="coding-example" ${index===0?'open':''}><summary><span>${escape(lab.name)}</span><small>${lab.lang}</small></summary>
-      <div class="coding-body">${langText(lab.goal,lab.si)}${codeSteps(lab)}
+      <div class="coding-body">${langText(lab.goal,lab.si)}<details class="panel live-walkthrough" data-coding-trace="${lab.id}">${walkthroughSummary(lab.lesson,"Play the coding example")}<div></div></details>${codeSteps(lab)}
         <details class="coding-solution"><summary>Full code</summary><pre><code>${escape(lab.code)}</code></pre></details>
         <details class="coding-solution"><summary>Expected output</summary><pre><code>${escape(lab.out)}</code></pre></details>
         <div class="actions"><a class="button primary" href="#lab/${lab.id}">Edit and run in the lab</a></div>
@@ -224,7 +247,7 @@ function lesson(item, anchor, signal) {
     const si=title==='async/await' ? 'await එක Promise එකේ result එක එනකම් දැනට තියෙන async function එක නවත්වනවා. Promise එක reject වුණොත් catch එකෙන් error එක handle කරන්න.' : starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
     const copy=si?langText(guide,si):`<p lang="en">${escape(guide)}</p>`;
     return `<li><details class="topic" id="topic-${index}"><summary><span>${escape(title)}</span><span class="topic-status" aria-hidden="true">${progress[key]?'✓':''}</span></summary>
-      <div class="topic-copy">${copy}${topicDiagram(item,index,title)}<details class="panel live-walkthrough" data-topic-trace="${index}"><summary>Play this example</summary><div></div></details>
+      <div class="topic-copy">${copy}${topicDiagram(item,index,title)}<details class="panel live-walkthrough" data-topic-trace="${index}">${walkthroughSummary(item.id,"Play this example")}<div></div></details>
       ${liveLinks(title,item.id)?`<div class="actions">${liveLinks(title,item.id)}</div>`:''}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
   }).join('');
   main.innerHTML = `<div class="shell page lesson-page"><a class="back" href="#library">‹ Study library</a>
@@ -234,13 +257,13 @@ function lesson(item, anchor, signal) {
       <section class="panel walkthrough" id="walkthrough"><span class="label">Worked example</span><h2>${escape(visual.title)}</h2>
         <ol class="flow-steps">${visual.steps.map(([label,en,si],index)=>`<li><div aria-hidden="true" class="step-dot">${index+1}</div><div class="step-body"><h3>${escape(label)}</h3>${langText(en,si)}</div></li>`).join('')}</ol>
       </section>
-      <details class="panel live-walkthrough" data-module-trace><summary>Play the lesson walkthrough</summary><div></div></details>
+      <details class="panel live-walkthrough" data-module-trace>${walkthroughSummary(item.id,"Play the lesson walkthrough")}<div></div></details>
       <section class="panel" id="explanation"><h2>What’s happening?</h2>${langText(item.en,item.si)}</section>
       ${cart?`<section class="panel prediction"><h2>What will the customer see?</h2><p>The cashier changes the shared cart from 1 to 3. Choose the customer’s quantity, then run the code to check.</p>
       <div class="actions" aria-label="Predict the output"><button class="button" data-guess="1" aria-pressed="false">1 juice</button><button class="button" data-guess="3" aria-pressed="false">3 juices</button></div>
       <p class="prediction-result" role="status"></p><a class="button primary" href="#lab/shared-cart">Edit and run the cart example</a></section>`:''}
       ${exercises.length?codingExamples(exercises):''}
-      ${notes.length ? `<section class="panel notes" id="concept-notes"><h2>Concepts to learn</h2>${notes.map(([,title,en,si,example],index)=>`<details class="answer" id="note-${index}"><summary>${escape(title)}</summary>${langText(en,si)}<div class="note-example"><span class="label">Example</span><p>${escape(example)}</p></div></details>`).join('')}</section>` : ''}
+      ${notes.length ? `<section class="panel notes" id="concept-notes"><h2>Concepts to learn</h2>${notes.map(([,title,en,si,example],index)=>`<details class="answer" id="note-${index}"><summary>${escape(title)}</summary>${langText(en,si)}<div class="note-example"><span class="label">Example</span><p>${escape(example)}</p></div><details class="panel live-walkthrough" data-note-trace="${index}">${walkthroughSummary(item.id,"Play this concept")}<div></div></details></details>`).join('')}</section>` : ''}
       <section class="panel interview-panel" id="interview-answer"><span class="label">Interview practice</span><h2>Say it in your own words</h2><p>${escape(item.question)}</p>
       <details class="answer"><summary>Compare with a sample answer</summary><p>${escape(item.answer)}</p></details>
       <div class="note-example"><span class="label">Memory cue</span><p>${escape(item.recall)}</p></div></section>
@@ -255,18 +278,25 @@ function lesson(item, anchor, signal) {
       <button id="mark-lesson" class="button ${marked?'':'primary'}" aria-pressed="${Boolean(marked)}">${marked?'✓ Studied':'Mark as studied'}</button>
     </aside></div></div>`;
   const attachTrace=(details,title,steps)=>{
-    details.addEventListener('toggle',()=>{
-      if(details.open&&!details.lastElementChild.firstChild) {
-        mountWalkthrough(details.lastElementChild,{title,signal,frames:steps.map(message=>({message}))});
-      }
-    },{signal});
+    bindLessonClips(details,[exampleClip({title,section:item.id,steps})],signal);
   };
-  attachTrace(main.querySelector('[data-module-trace]'),visual.title,visual.steps.map(([label,en,si])=>language==='si'?si:label+' · '+en));
+  attachTrace(main.querySelector('[data-module-trace]'),visual.title,visual.steps.map(([label,message,si])=>({label,message,si})));
   main.querySelectorAll('[data-topic-trace]').forEach(details=>{
     const index=Number(details.dataset.topicTrace);
     const title=item.topics[index];
-    const steps=(language==='si'&&topicScenariosSi[title.toLowerCase()])||topicScenarios[item.id-1][index];
+    const translated=topicScenariosSi[title.toLowerCase()];
+    const steps=topicScenarios[item.id-1][index].map((message,i)=>({message,si:translated?.[i]}));
     attachTrace(details,title,steps);
+  });
+  main.querySelectorAll('[data-note-trace]').forEach(details=>{
+    const [,title,message,si,example]=notes[Number(details.dataset.noteTrace)];
+    attachTrace(details,title,[
+      {label:'Concept',message,si},
+      {label:'Example',message:example},
+    ]);
+  });
+  main.querySelectorAll('[data-coding-trace]').forEach(details=>{
+    bindLessonClips(details,[codeClip(labs.find(lab=>lab.id===details.dataset.codingTrace))],signal);
   });
   if (cart) {
     connectCart($('#shared-cart'),langText);
@@ -313,7 +343,14 @@ function lesson(item, anchor, signal) {
     }
   });
   updateCount();
-  if (anchor) requestAnimationFrame(()=>jump(anchor));
+  if (anchor) requestAnimationFrame(()=>{
+    if(signal.aborted) return;
+    if(anchor==='walkthrough-motion') {
+      const details=main.querySelector('[data-module-trace]');
+      details.open=true;
+      details.scrollIntoView({block:'start'});
+    } else jump(anchor);
+  });
 }
 const get = async (url,mode) => {
   const response = await fetch(url);
@@ -385,15 +422,17 @@ function runLab() {
   };
   document.body.append(frame);
 }
-function labView(id) {
+function labView(id,signal) {
   const lab = labs.find(item=>item.id===id) ?? labs[0];
   activeLab = lab;
   main.innerHTML=`<div class="shell page"><a class="back" href="#lesson/${lab.lesson}/coding-examples">‹ Lesson coding examples</a><div class="intro"><div class="eyebrow">Practice</div><h1>Code lab</h1><p>Edit an example, predict the result, then run it in your browser.</p></div>
     <label class="lab-picker"><span class="label">Choose an example</span><select id="lab-select">${labs.map(item=>`<option value="${item.id}" ${item.id===lab.id?'selected':''}>${escape(item.name)} · ${item.lang}</option>`).join('')}</select></label>
     <div class="panel">${langText(lab.goal,lab.si)}${lab.lang==='SQL'?'<p class="muted">Uses a fresh SQLite database with sample customers and orders on every run.</p>':''}</div>
+    <details class="panel live-walkthrough" data-lab-trace>${walkthroughSummary(lab.lesson,"Play the coding example")}<div></div></details>
     <details class="panel coding-solution"><summary>How to write this example</summary>${codeSteps(lab)}</details>
     <div class="workbench"><section class="panel"><h2><label for="editor">${lab.lang} editor</label></h2><textarea id="editor" class="code" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" maxlength="30000">${escape(lab.code)}</textarea><div class="actions lab-actions"><button class="button primary" id="run">Run code</button><button class="button" id="reset">Reset example</button></div></section>
     <section class="panel"><h2>Output</h2><p id="lab-status" class="muted" role="status">Ready to run</p><pre id="output" class="output" aria-live="polite"></pre><iframe class="preview" title="HTML preview" id="preview" sandbox="" hidden></iframe><details class="answer"><summary>Show expected output</summary><pre>${escape(lab.out)}</pre></details></section></div></div>`;
+  bindLessonClips(main.querySelector('[data-lab-trace]'),[codeClip(lab)],signal);
   $('#lab-select').onchange=event=>{location.hash='lab/'+event.target.value;};
   $('#run').onclick=runLab;
   $('#reset').onclick=()=>{
@@ -406,15 +445,20 @@ function labView(id) {
     $('#lab-status').textContent='Ready to run';
   };
 }
-function review() {
+function review(signal) {
   const item = flashModules[flashIndex];
   main.innerHTML=`<div class="shell page flash"><div class="intro"><div class="eyebrow">Active recall</div><h1>Flashcards</h1><p>Say your answer aloud, then compare it with the example.</p></div>${editionQuestionIndex(escape)}
     <section class="panel"><span class="label">Section ${item.id} · ${escape(item.title)}</span><h2>${escape(item.question)}</h2>
-    ${revealed?`<p>${escape(item.answer)}</p>${language==='en'?'':`<p lang="si">${escape(item.si)}</p>`}<p class="muted">${escape(item.recall)}</p>`:''}</section>
+    ${revealed?`<p>${escape(item.answer)}</p>${language==='en'?'':`<p lang="si">${escape(item.si)}</p>`}<p class="muted">${escape(item.recall)}</p>
+      <details class="panel live-walkthrough" data-flash-trace>${walkthroughSummary(item.id,"Play the example behind this answer")}<div></div></details>`:''}</section>
     <div class="actions"><button class="button" id="prev" ${flashIndex===0?'disabled':''}>Previous</button><button class="button primary" id="reveal" aria-expanded="${revealed}">${revealed?'Hide answer':'Reveal answer'}</button><button class="button" id="next" ${flashIndex===flashModules.length-1?'disabled':''}>Next</button></div>
     <div class="actions"><a class="back" href="#lesson/${item.id}">Review the full lesson</a></div></div>`;
-  $('#reveal').onclick=()=>{revealed=!revealed;review();$('#reveal').focus();};
-  const flip = (step,selector)=>{flashIndex+=step;revealed=false;review();($(selector).disabled?$('#reveal'):$(selector)).focus();};
+  if(revealed){
+    const steps=visualLessons[item.id].steps.map(([label,message,si])=>({label,message,si}));
+    bindLessonClips(main.querySelector('[data-flash-trace]'),[exampleClip({title:item.title,section:item.id,steps})],signal);
+  }
+  $('#reveal').onclick=()=>{revealed=!revealed;render();$('#reveal').focus();};
+  const flip = (step,selector)=>{flashIndex+=step;revealed=false;render();($(selector).disabled?$('#reveal'):$(selector)).focus();};
   $('#prev').onclick=()=>flip(-1,'#prev');
   $('#next').onclick=()=>flip(1,'#next');
 }
@@ -489,8 +533,8 @@ function render() {
   if (page==='lesson'&&item&&editions[item.id]) openEdition(main,item,anchor,{escape,language,progress,record,signal});
   else if (page==='lesson'&&item) lesson(item,anchor,signal);
   else if (page==='live') openLive(main,id,anchor,sourcePage,signal);
-  else if (page==='lab') labView(id);
-  else if (page==='review') review();
+  else if (page==='lab') labView(id,signal);
+  else if (page==='review') review(signal);
   else library();
 }
 $('#language').textContent=labels[language];
