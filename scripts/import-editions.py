@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parents[1] / "public" / "editions"
 LESSON = re.compile(r"^(?:L\s*ESSON|OOP / LESSON)\s+\d+", re.I)
 SPECIAL = re.compile(r"^(?:VISUAL (?:COMPANION|LESSON)|(?:I\s*)?NTERVIEW PRACTICE|ANSWER KEY|(?:P\s*)?RACTICAL PROJECT|STUDY CHECKLIST|ADDITIONAL TOPICS)", re.I)
 FIGURE = re.compile(r"^(?:graphical explanation|visual explanation|visual trace|step-by-step visual trace|read the diagram step by step)$", re.I)
+QUESTION = re.compile(r"(?im)^\s*(?:interview (?:questions?\b|q\s*&\s*a\b)|follow-up question\b)")
+SPACED_WORD = re.compile(r"(?<![A-Za-z])(?:[A-Z0-9] ){2,}[A-Z0-9](?![A-Za-z])")
 NUMBERED = re.compile(r"^\d{1,2}\.\s+[A-Z]")
 SI = re.compile(r"[\u0d80-\u0dff]")
 FOOTER_Y = 797
@@ -29,6 +31,13 @@ SECTION_TITLES = [
     "TypeScript", "React.js Fundamentals", "React Hooks and Performance", "Next.js and Angular",
     "UI Libraries and Frontend Tooling", "Backend Fundamentals", "HTTP and REST APIs",
     "Node.js and Express.js", "Java Fundamentals", "Spring Boot and Spring Security",
+    "Other Backend Languages and Frameworks", "SQL and Relational Databases",
+    "MongoDB and NoSQL", "Authentication and Application Security", "Git and GitHub",
+    "Software Engineering and Architecture", "Testing, QA and Debugging",
+    "Operating Systems and Networking", "Deployment, Cloud and DevOps",
+    "System Design Basics", "Mobile, Shopify, SEO and AI", "Payment Gateway Integration",
+    "Practical Coding Exercises", "CV and Project Interview Preparation",
+    "Behavioral and Interview Readiness",
 ]
 
 
@@ -126,11 +135,53 @@ def diagram_regions(page, blocks, section):
     return result
 
 
+def plain_marker(text):
+    text = SPACED_WORD.sub(lambda match: match[0].replace(" ", ""), text).upper()
+    return re.sub(r"^S\s+ECTION\b", "SECTION", text)
+
+
+def classify_extended(blocks):
+    lines = [(line.strip(), index) for index, block in enumerate(blocks[:6])
+             for line in block["text"].splitlines() if line.strip()]
+    for index, (line, block_index) in enumerate(lines[:-1]):
+        marker = plain_marker(line)
+        numbered_lesson = re.match(
+            r"^(?:(?:SECTION\s+\d+.*?|[A-Z ]+\s*[·•]\s*)\bLESSON|LESSON|EXERCISE)\s+\d+",
+            marker,
+        )
+        syllabus_lesson = re.fullmatch(
+            r"SECTION\s+\d+\s*/\s*(?:CORE SYLLABUS|RETAINED ADDITION|NEW ADDITION|"
+            r"PREVIOUS ADDITION(?:AL CONCEPTS)?|EXTENDED CONCEPT|NEWLY ADDED LESSON)",
+            marker,
+        )
+        if not (numbered_lesson or syllabus_lesson):
+            continue
+        parts = [lines[index+1][0]]
+        title_block = lines[index+1][1]
+        title_size = blocks[title_block]["size"]
+        for following, following_block in lines[index+2:]:
+            if following_block == title_block or (
+                following_block == title_block+1 and title_block != block_index
+                and blocks[following_block]["size"] >= 17
+                and abs(blocks[following_block]["size"]-title_size) < 0.5
+            ):
+                parts.append(following)
+            else:
+                break
+        title = re.sub(r"-\s+", "-", " ".join(parts))
+        return re.sub(r"^\d+\.\s+", "", title)
+    return None
+
+
 def classify(page,blocks,section,page_number,last_title):
     first = blocks[0]["text"].splitlines() if blocks else []
     numbers = [b["text"].splitlines()[0] for b in blocks if b["size"]>=13 and NUMBERED.match(b["text"])]
     if page_number==1:
         return SECTION_TITLES[section-1], "Overview", numbers
+    if section>=21:
+        extended = classify_extended(blocks)
+        if extended:
+            return extended, "Lesson", numbers
     for idx,block in enumerate(blocks[:4]):
         lines = block["text"].splitlines()
         prefix = lines[0]
@@ -190,7 +241,7 @@ def import_book(path, section):
                 else:
                     style="code" if value["mono"] else "heading" if value["bold"] or value["size"]>=15 else "text"
                     content.append([style,value["text"]])
-            question_count = sum(len(re.findall(r"(?im)^\s*interview questions?\b",b["text"])) for b in blocks)
+            question_count = sum(len(QUESTION.findall(b["text"])) for b in blocks)
             (folder/f"{page_number}.json").write_text(json.dumps(content,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
             entries.append(dict(title=title,kind=kind,headings=headings,questions=question_count,
                                 diagrams=sum(item[0]=="diagram" for item in content)))
@@ -199,16 +250,40 @@ def import_book(path, section):
 
 
 def main():
-    parser=argparse.ArgumentParser()
-    parser.add_argument("source",type=Path)
-    args=parser.parse_args()
-    sources={int(path.name[8:10]):path for path in args.source.rglob("Section_*.pdf")}
-    if set(sources)!=set(range(1,20)):
-        raise SystemExit("Expected Sections 01–19")
-    index={}
-    for section in sorted(sources):
-        index[section]=import_book(sources[section],section)
-    (ROOT/"index.js").write_text("export const editions = "+json.dumps(index,ensure_ascii=False,separators=(",",":"))+";\n",encoding="utf-8")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("source", type=Path)
+    parser.add_argument("--sections", nargs="+", type=int, help="Import only these section numbers")
+    args = parser.parse_args()
+    sources = {}
+    for path in sorted(args.source.rglob("Section_*.pdf")):
+        match = re.fullmatch(r"Section_(\d{2})_.+\.pdf", path.name)
+        if not match:
+            continue
+        section = int(match[1])
+        if args.sections and section not in args.sections:
+            continue
+        if section in sources:
+            raise SystemExit(f"Multiple source PDFs for section {section}")
+        sources[section] = path
+    missing = set(args.sections or []) - sources.keys()
+    if missing:
+        raise SystemExit(f"Missing source PDFs for sections {sorted(missing)}")
+    if not sources or any(not 1 <= section <= len(SECTION_TITLES) for section in sources):
+        raise SystemExit("Expected source PDFs for sections 01–34")
+
+    manifest = ROOT / "index.js"
+    prefix = "export const editions = "
+    index = {}
+    if manifest.exists():
+        serialized = manifest.read_text(encoding="utf-8").strip()
+        if not serialized.startswith(prefix) or not serialized.endswith(";"):
+            raise SystemExit("Invalid edition manifest")
+        index = json.loads(serialized[len(prefix):-1])
+
+    for section, path in sorted(sources.items()):
+        index[str(section)] = import_book(path, section)
+    ordered = dict(sorted(index.items(), key=lambda entry: int(entry[0])))
+    manifest.write_text(prefix + json.dumps(ordered, ensure_ascii=False, separators=(",", ":")) + ";\n", encoding="utf-8")
 
 if __name__=="__main__":
     main()

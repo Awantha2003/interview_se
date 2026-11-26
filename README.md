@@ -27,7 +27,7 @@ The attached internship checklist provides the syllabus. All 34 checklist sectio
 
 ## PDF teaching editions
 
-Sections 01–19 use the supplied PDF lessons. Study Library search indexes their page titles and numbered headings. Each page keeps an original PDF link for checking the page layout and copy. Vector diagrams are rebuilt as inline SVG, and Sinhala passages use crops of the source text because some embedded fonts lose Sinhala shaping during extraction. Each section also has a browser-based example with its own inputs and output.
+Sections 01–19 and 21–33 use the supplied PDF lessons. Study Library search indexes their page titles and numbered headings. Each page keeps an original PDF link for checking the page layout and copy. Vector diagrams are rebuilt as inline SVG, and Sinhala passages use crops of the source text because some embedded fonts lose Sinhala shaping during extraction. Each section also has a browser-based example with its own inputs and output.
 
 To regenerate the static editions, install PyMuPDF and Pillow in a Python environment and run:
 
@@ -35,4 +35,4 @@ To regenerate the static editions, install PyMuPDF and Pillow in a Python enviro
 python scripts/import-editions.py /path/to/attachments
 ```
 
-The source directory may contain nested folders and must include the 19 files named `Section_01_…` through `Section_19_…`. Section photos are linked and credited in the reader.
+The source directory may contain nested folders and must include a file named `Section_NN_…pdf` for each edition being imported. Pass `--sections 21 22 23` to import specific sections. Other entries in the existing manifest are preserved. Section photos are linked and credited in the reader.

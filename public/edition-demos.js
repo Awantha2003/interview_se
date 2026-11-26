@@ -68,6 +68,89 @@ const demos = {
       'GET /bookings/42',user==='guest'?'Authentication missing':'Authenticated → check ownership',
       user==='guest'?'401 Unauthorized':user==='other'?'403 Forbidden':'Controller returns booking → 200',
     ]],
+  21: ['Find which customers have paid twice','Filter order rows before grouping, then change the minimum count to see which groups remain.','Paid orders filter කරලා customer අනුව group කරන්න. Minimum count එක වෙනස් කරලා ඉතිරි customers බලන්න.','Minimum paid orders',
+    [[1,'At least 1'],[2,'At least 2'],[3,'At least 3']], minimum=>{
+      const orders=[['Nila','paid'],['Nila','paid'],['Sam','paid'],['Sam','pending']];
+      const counts=new Map();
+      for (const [name,status] of orders) {
+        if (status==='paid') counts.set(name,(counts.get(name)??0)+1);
+      }
+      const matches=[...counts].filter(([,count])=>count>=minimum).map(([name,count])=>name+' ('+count+')');
+      return ['Orders: Nila paid, paid; Sam paid, pending','WHERE status = paid → GROUP BY customer','HAVING COUNT(*) ≥ '+minimum,matches.join(', ')||'No matching customers'];
+    }],
+  22: ['Read an address from a document model','Compare reading an address saved with an order and looking up the customer’s current address.','Order එකේම save කරපු address එක සහ customer profile එකෙන් ගන්න අලුත් address එක compare කරන්න.','Order model',
+    [[true,'Embed shipping address'],[false,'Reference customer profile']], embedded=>[
+      'Order 42 shipped to Colombo','Customer profile later changes to Kandy',
+      embedded?'Read order.shippingAddress → Colombo':'Resolve order.customerId → current address: Kandy',
+    ]],
+  23: ['Check whether an order can be opened','Follow the server checks for a visitor, a signed-in customer and the order owner.','Order එක බලන්න කලින් server එක user කවුද සහ order එක අයිති කාටද බලන හැටි අත්හදා බලන්න.','Request identity',
+    [['guest','Signed out'],['sam','Sam · different customer'],['nila','Nila · order owner']], user=>[
+      'Request: read order 42',user==='guest'?'No signed-in session':'Session belongs to '+(user==='sam'?'Sam':'Nila'),
+      user==='guest'?'401 · sign in first':user==='sam'?'Ownership check fails → 403':'Ownership check passes → show order',
+    ]],
+  24: ['See what happens to your local Git branch','Your local main is at A and remote main has commit B. Choose how to bring that information in.','Local main එක A වල. Remote එකේ B තියෙනවා. Fetch සහ fast-forward pull කරද්දී local branch එකට මොකද වෙන්නේ බලන්න.','Git operation',
+    [['fetch','Fetch'],['pull','Fast-forward pull']], operation=>[
+      'main → A · remote main → B','Download B → origin/main now points to B',
+      operation==='fetch'?'Local main stays at A':'Local main fast-forwards to B',
+    ]],
+  25: ['Swap a discount strategy','The checkout supplies the subtotal to a selected rule. See how different rule choices change the result.','Checkout එක subtotal එක තෝරපු discount rule එකට දෙනවා. Rule එක මාරු කරලා total එක බලන්න.','Discount rule',
+    [[0,'Standard · 0%'],[10,'Member · 10%'],[25,'Sale · 25%']], rate=>[
+      'Cart subtotal: Rs. 1,200','Strategy returns '+rate+'% off','Checkout total: Rs. '+(1200*(100-rate)/100).toLocaleString('en-LK'),
+    ]],
+  26: ['Test the boundary of a quantity rule','The rule accepts whole numbers from 1 to 10. Try inputs around both bounds.','Quantity එක 1ත් 10ත් අතර whole number එකක් වෙන්න ඕන. සීමා දෙක අසල inputs test කරන්න.','Test input',
+    [[0,'0'],[1,'1'],[10,'10'],[11,'11']], quantity=>[
+      'Input: '+quantity,'Check 1 ≤ quantity ≤ 10',quantity>=1&&quantity<=10?'Expected: accepted':'Expected: rejected',
+    ]],
+  27: ['Trace a browser connection','Choose an address to see which default port the browser uses and whether TLS is part of the flow.','Address එක තෝරලා browser එක යන port එක සහ TLS භාවිත වෙනවද බලන්න.','Address',
+    [[false,'http://shop.example'],[true,'https://shop.example']], secure=>[
+      'DNS resolves shop.example',secure?'Connect on port 443 and establish TLS':'Connect on port 80',
+      secure?'Send HTTP through the protected connection':'Send HTTP without TLS',
+    ]],
+  28: ['Release a build through CI','A Git push starts a build. Choose a test result to see whether the release step can proceed.','Git push එකෙන් build එක පටන් ගන්නවා. Tests pass ද fail ද අනුව release වෙනවද බලන්න.','Pipeline result',
+    [[true,'Tests pass'],[false,'Tests fail']], pass=>[
+      'Git push → create build artifact',pass?'Checks pass':'Checks fail',pass?'Deploy the checked artifact':'Keep current production version',
+    ]],
+  29: ['Read inventory through a cache','Compare a cache hit with a cache miss and watch where the stock value comes from.','Cache hit එකක් සහ miss එකක් compare කරලා stock value එක එන්නේ කොහෙන්ද බලන්න.','Cache state',
+    [[true,'Stock is cached'],[false,'Cache entry expired']], cached=>[
+      'Read stock for Mango juice',cached?'Cache hit → return 8':'Cache miss → read 8 from database',
+      cached?'No database read on this request':'Fill cache → return 8',
+    ]],
+  30: ['Preview product metadata for search','Pick a product and see how a storefront can use product-specific title and description metadata. The preview is illustrative.','Product එක තෝරලා page title සහ description එක මාරු වෙන හැටි බලන්න. මේක search preview උදාහරණයක්.','Storefront product',
+    [['Mango','Mango juice'],['Lime','Lime juice']], drink=>[
+      'Product template receives '+drink,'Set title: '+drink+' juice · Fresh Drinks','Description: Order fresh '+drink.toLowerCase()+' juice from the menu.',
+    ]],
+  31: ['Handle repeated payment notifications','These are simulated provider events. Compare a first delivery, a repeat delivery and a payment with the wrong amount.','මේවා simulated payment events. පළමු notification එක, ඒක නැවත එන එක, සහ වැරදි amount එක compare කරන්න.','Provider event',
+    [['first','First verified delivery'],['duplicate','Same transaction again'],['mismatch','Amount differs']], event=>[
+      'Read verified event for order 42',
+      event==='mismatch'?'Compare Rs. 400 with expected Rs. 500':'Amount matches Rs. 500',
+      {first:'Store transaction ID and mark order paid',duplicate:'Transaction ID already stored → keep one payment',mismatch:'Keep order unpaid and investigate the mismatch'}[event],
+    ]],
+  32: ['Trace binary search on sorted data','Choose a target in the sorted list [2, 4, 6, 8, 10], or try a missing value.','Sorted list එකේ target එකක් තෝරලා search range එක කුඩා වෙන හැටි බලන්න.','Search target',
+    [[2,'Find 2'],[10,'Find 10'],[7,'Find 7 (missing)']], target=>{
+      const items=[2,4,6,8,10];
+      const steps=['Sorted list: '+items.join(', ')];
+      let left=0;
+      let right=items.length-1;
+      while (left<=right) {
+        const mid=Math.floor((left+right)/2);
+        const value=items[mid];
+        if (value===target) return [...steps,'Check '+value,'Found at index '+mid];
+        if (value<target) {
+          steps.push(value+' < '+target+' → move right');
+          left=mid+1;
+        } else {
+          steps.push(value+' > '+target+' → move left');
+          right=mid-1;
+        }
+      }
+      return [...steps,'Range is empty → not found'];
+    }],
+  33: ['Match a CV claim to interview evidence','Choose a claim from this fictional project. Trace the contribution and the evidence you could show.','කල්පිත project එකේ CV claim එකක් තෝරන්න. ඔබ කළ වැඩේ සහ ඒක පෙන්වන evidence එක වෙන් කරලා බලන්න.','Sample CV claim',
+    [['api','Built the booking API'],['tests','Tested booking edge cases']], claim=>({
+      api:['Problem: two customers can request one seat','Contribution: added booking endpoint and a unique slot rule','Evidence: show the endpoint and a conflict response'],
+      tests:['Risk: a repeated request creates a duplicate','Contribution: tested two requests for the same slot','Evidence: show one booking succeeds and the second returns a conflict'],
+    })[claim]],
+
 };
 
 export function mountEditionDemo(root,section,escape) {

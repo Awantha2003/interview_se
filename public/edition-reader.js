@@ -16,8 +16,9 @@ export function editionPageFor(section, title) {
 }
 
 const photos = {
-  1: ['keyboard','A wired keyboard with a US layout','Keyboard input becomes data the program can process.','Dingo1234555','https://commons.wikimedia.org/wiki/File:Apple_Keyboard_(A1048).jpg'],
-  15: ['server-racks','Rows of server racks inside a data centre','These servers can host backend processes that handle client requests.','NERSC','https://commons.wikimedia.org/wiki/File:Front_of_server_racks_at_NERSC.jpg'],
+  1: ['keyboard.webp','A wired keyboard with a US layout','Keyboard input becomes data the program can process.','Dingo1234555','https://commons.wikimedia.org/wiki/File:Apple_Keyboard_(A1048).jpg'],
+  27: ['ethernet.jpg','An Ethernet plug with eight exposed contacts','An Ethernet connector links devices to a physical network. TCP port 443 identifies a service endpoint.','David Monniaux','https://commons.wikimedia.org/wiki/File:Ethernet_RJ45_connector_p1160054.jpg','CC BY-SA 3.0','https://creativecommons.org/licenses/by-sa/3.0/'],
+  15: ['server-racks.webp','Rows of server racks inside a data centre','These servers can host backend processes that handle client requests.','NERSC','https://commons.wikimedia.org/wiki/File:Front_of_server_racks_at_NERSC.jpg'],
 };
 
 function scopedSvg(source,prefix) {
@@ -29,29 +30,36 @@ function renderBlocks(blocks,escape,language,practice) {
   const answerMarkup=text=>practice?
     `<details class="source-answer"><summary>Reveal source answer</summary><p>${escape(text)}</p></details>`:
     `<p class="source-answer">${escape(text)}</p>`;
+  const questionMarkup=text=>`<p class="source-question" data-question>${escape(text)}</p>`;
+  const splitQuestion=text=>{
+    const marker=text.search(/\n(?:Answer|A)\s*:/i);
+    const end=text.indexOf('?');
+    const cut=marker>=0?marker:end>=0?end+1:text.length;
+    return [text.slice(0,cut).trim(),text.slice(cut).trim()];
+  };
   let withinQuestion=0;
   return blocks.map(([type,value,label,width],index)=>{
     if (type==='diagram') return `<figure class="source-diagram" aria-label="${escape(label)}">${scopedSvg(value,'edition-'+index+'-')}</figure>`;
     if (type==='sinhala') return language==='en'?'':`<div class="source-sinhala"><img class="edition-sinhala" lang="si" style="--source-width:${Number(width)}px" src="data:image/webp;base64,${value}" alt="${escape(label)}"></div>`;
     if (type==='code') return `<pre class="edition-code"><code>${escape(value)}</code></pre>`;
-    const question=/^interview questions?\b/i.test(value);
-    const answer=/^answer\s*:/i.test(value);
+    const question=/^(?:interview (?:questions?\b|q\s*&\s*a\b)|follow-up question\b)/i.test(value);
+    const answer=/^(?:answer|a)\s*:/i.test(value);
     if (withinQuestion===1) {
-      withinQuestion=2;
-      return `<p class="source-question" data-question>${escape(value)}</p>`;
+      const [prompt,response]=splitQuestion(value);
+      withinQuestion=response?0:2;
+      return questionMarkup(prompt)+(response?answerMarkup(response):'');
     }
     if (withinQuestion===2) {
       withinQuestion=0;
       if (!question) return answerMarkup(value);
     }
     if (question) {
-      if (/^interview questions?$/i.test(value.trim())) {
+      if (/^(?:interview questions?(?: (?:and|&) answer)?|follow-up question)$/i.test(value.trim())) {
         withinQuestion=1;
         return `<h3>${escape(value)}</h3>`;
       }
-      const split=value.search(/\nAnswer\s*:/i);
-      if (split>=0) return `<p class="source-question" data-question>${escape(value.slice(0,split))}</p>${answerMarkup(value.slice(split+1))}`;
-      return `<p class="source-question" data-question>${escape(value)}</p>`;
+      const [prompt,response]=splitQuestion(value);
+      return questionMarkup(prompt)+(response?answerMarkup(response):'');
     }
     if (answer) return answerMarkup(value);
     if (type==='heading'&&value.length<180) return `<h3>${escape(value)}</h3>`;
@@ -87,7 +95,7 @@ export function openEdition(main,item,anchor,{escape,language,progress,record}) 
       </div>
     </div>
     ${demo?`<section class="panel edition-demo" id="edition-demo"></section>
-      ${photo?`<figure class="edition-photo"><img src="/edition-images/${photo[0]}.webp" alt="${escape(photo[1])}"><figcaption>${escape(photo[2])} <a href="${photo[4]}" target="_blank" rel="noopener">Photo: ${escape(photo[3])}, CC0</a></figcaption></figure>`:''}`
+      ${photo?`<figure class="edition-photo"><img src="/edition-images/${photo[0]}" alt="${escape(photo[1])}"><figcaption>${escape(photo[2])} <a href="${photo[4]}" target="_blank" rel="noopener">Photo: ${escape(photo[3])}</a> · ${photo[6]?`<a href="${photo[6]}" target="_blank" rel="noopener">${escape(photo[5])}</a>`: 'CC0'}</figcaption></figure>`:''}`
     :`<section class="edition-reader" aria-label="Source lesson page">
       <div class="edition-reader-title"><div><span class="label">PDF page ${page} of ${pages.length}</span><h2>${escape(entry.title)}</h2></div>
       <div class="edition-toolbar-actions">${entry.questions?'<button class="button" id="edition-question">Go to interview question</button>':''}
