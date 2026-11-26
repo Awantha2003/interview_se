@@ -1,6 +1,7 @@
 import { createPlayer } from './live-player.js';
 import { heapInsertion, heapSeed, pipelineTrace } from './live-models.js';
 import { examplesForTitle, liveByKey, liveCatalog } from './live-catalog.js';
+import { art, drawSystem, systems } from './live-art.js';
 import { sectionDemo } from './edition-demos.js';
 
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -31,7 +32,7 @@ function treePositions(count) {
 function drawTree(scene,frame) {
   let tree=scene.querySelector('.live-tree');
   if(!tree) {
-    scene.innerHTML='<div class="live-tree" role="group" aria-label="Tree values by level"></div><div class="live-array" aria-label="Array representation"></div>';
+    scene.innerHTML='<div class="tree-diorama"><div class="live-tree" role="group" aria-label="Tree values by level"></div></div><div class="live-array" aria-label="Array representation"></div>';
     tree=scene.querySelector('.live-tree');
   }
   const positions=treePositions(frame.nodes.length);
@@ -45,11 +46,12 @@ function drawTree(scene,frame) {
       element=document.createElement('span');
       element.className='tree-node';
       element.dataset.node=node.id;
+      element.innerHTML=art('orb')+'<strong></strong>';
       tree.append(element);
     }
     element.style.left=positions[i][0]+'%';
     element.style.top=positions[i][1]+'%';
-    element.textContent=node.value;
+    element.querySelector('strong').textContent=node.value;
     element.setAttribute('aria-label','Index '+i+': '+node.value);
     element.classList.toggle('is-active',frame.active?.includes(i));
   });
@@ -62,25 +64,73 @@ function arrayMarkup(frame) {
     return `<div class="live-cell ${active?'is-active':''} ${outside?'is-outside':''}"><span>${esc(item)}</span><small>${i}</small></div>`;
   }).join('');
 }
+function drawTiles(scene,frame) {
+  let row=scene.querySelector('.motion-tiles');
+  if(!row) {
+    scene.innerHTML='<div class="motion-tiles" aria-label="Values by index"></div><p class="live-output" hidden></p>';
+    row=scene.firstElementChild;
+  }
+  const existing=new Map([...row.children].map(el=>[el.dataset.tile,el]));
+  const oldBounds=new Map([...existing].map(([key,el])=>[key,el.getBoundingClientRect()]));
+  const counts=new Map();
+  const fragment=document.createDocumentFragment();
+  frame.items.forEach((value,i)=>{
+    const base=JSON.stringify(value);
+    const occurrence=counts.get(base)??0;
+    counts.set(base,occurrence+1);
+    const key=base+'#'+occurrence;
+    let tile=existing.get(key);
+    if(!tile){
+      tile=document.createElement('div');
+      tile.className='motion-tile';
+      tile.dataset.tile=key;
+      tile.innerHTML=art('orb')+'<strong></strong><small></small>';
+      tile.querySelector('strong').textContent=value;
+    }
+    tile.querySelector('small').textContent=i;
+    tile.classList.toggle('is-active',Boolean(frame.active?.includes(i)));
+    tile.classList.toggle('is-outside',Boolean(frame.range&&(i<frame.range[0]||i>frame.range[1])));
+    fragment.append(tile);
+  });
+  row.replaceChildren(fragment);
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    for(const el of row.children){
+      const before=oldBounds.get(el.dataset.tile);
+      const after=el.getBoundingClientRect();
+      const x=before?before.x-after.x:0;
+      const y=before?before.y-after.y:16;
+      if(x||y) el.animate([{transform:`translate(${x}px,${y}px)`,opacity:before?1:0},{transform:'translate(0,0)',opacity:1}],{duration:380,easing:'ease-out'});
+    }
+  }
+  const output=scene.querySelector('.live-output');
+  output.hidden=!frame.output;
+  if(frame.output) output.innerHTML=`Output <code>${frame.output.length?esc(frame.output.join(' → ')):'Empty'}</code>`;
+}
+
 function drawFrame(scene,frame,steps,index) {
   if(frame.nodes) return drawTree(scene,frame);
-  const output=frame.output? `<p class="live-output">Output <code>${frame.output.length?esc(frame.output.join(' → ')):'Empty'}</code></p>`:'';
-  if(frame.items) {
-    scene.innerHTML=`<div class="live-array" aria-label="Values by index">${arrayMarkup(frame)}</div>${output}`;
-  } else {
-    scene.innerHTML=`<ol class="live-flow">${steps.map((step,i)=>`<li class="${i===index?'is-current':i<index?'is-done':''}" ${i===index?'aria-current="step"':''}>${esc(step.message)}</li>`).join('')}</ol>${output}`;
+  if(frame.items) return drawTiles(scene,frame);
+  const actors=[['laptop','Input'],['gear','Process'],['shield','Result']];
+  const point=steps.length>1?Math.round(index*2/(steps.length-1)):1;
+  drawSystem(scene,{point,detail:'Step '+(index+1),item:frame.output?.at(-1)??'Event'},actors,['parcel','Event']);
+  let current=scene.querySelector('.scene-step-copy');
+  if(!current){
+    current=document.createElement('p');
+    current.className='scene-step-copy';
+    scene.append(current);
   }
+  current.textContent=frame.output?'Output: '+frame.output.join(' → '):frame.message;
 }
 const graphPositions={A:[50,14],B:[24,40],C:[76,40],D:[11,74],E:[42,74],F:[84,74]};
 const graphLinks=[['A','B'],['A','C'],['B','D'],['B','E'],['C','F'],['E','F']];
 function drawGraph(scene,frame) {
-  scene.innerHTML='<div class="live-tree graph-tree" aria-label="Graph of nodes A to F"></div><div class="graph-result"></div>';
+  scene.innerHTML='<div class="tree-diorama"><div class="live-tree graph-tree" aria-label="Graph of nodes A to F"></div></div><div class="graph-result"></div>';
   const graph=scene.querySelector('.graph-tree');
   edges(graph,graphPositions,graphLinks);
   for(const name of frame.nodes) {
     const [left,top]=graphPositions[name];
     const state=name===frame.activeNode?'is-active':frame.visit.includes(name)?'is-visited':'';
-    graph.insertAdjacentHTML('beforeend',`<span class="tree-node ${state}" style="left:${left}%;top:${top}%">${esc(name)}</span>`);
+    graph.insertAdjacentHTML('beforeend',`<span class="tree-node ${state}" style="left:${left}%;top:${top}%">${art('orb')}<strong>${esc(name)}</strong></span>`);
   }
   scene.querySelector('.graph-result').textContent='Visit order: '+frame.visit.join(' → ');
 }
@@ -120,6 +170,7 @@ function mountHeap(root,signal) {
   };
 }
 const pipelineStages=['Commit','Build','Test','Release gate','Deploy','Health check'];
+const pipelineIcons=['laptop','gear','shield','badge','server','shield'];
 const stateLabels={waiting:'Waiting',running:'In progress',passed:'Passed',failed:'Failed',blocked:'Blocked'};
 function mountPipeline(root,signal) {
   root.innerHTML=`<form class="live-inputs">
@@ -138,8 +189,25 @@ function mountPipeline(root,signal) {
   const player=createPlayer(root.querySelector('[data-player]'),{signal,draw(scene,frame){
     if(frame.states[5]==='passed') production=frame.production;
     approve.hidden=!frame.gate||approved;
-    scene.innerHTML=`<p class="pipeline-production">Production at this step <strong>${esc(frame.production)}</strong></p>
-      <ol class="pipeline-grid">${pipelineStages.map((stage,i)=>`<li data-state="${frame.states[i]}" ${frame.stage===i?'aria-current="step"':''}><strong>${stage}</strong><span>${stateLabels[frame.states[i]]}</span></li>`).join('')}</ol>`;
+    if(!scene.querySelector('.pipeline-set')){
+      scene.innerHTML=`<p class="pipeline-production">Production at this step <strong></strong></p>
+        <div class="pipeline-set"><ol class="pipeline-grid">${pipelineStages.map((stage,i)=>`<li>${art(pipelineIcons[i])}<strong>${stage}</strong><span data-stage-status></span></li>`).join('')}</ol>
+        <div class="pipeline-piece" aria-hidden="true">${art('parcel')}</div></div>`;
+    }
+    scene.querySelector('.pipeline-production strong').textContent=frame.production;
+    scene.querySelectorAll('.pipeline-grid li').forEach((stage,i)=>{
+      stage.dataset.state=frame.states[i];
+      stage.querySelector('[data-stage-status]').textContent=stateLabels[frame.states[i]];
+      if(frame.stage===i) stage.setAttribute('aria-current','step');
+      else stage.removeAttribute('aria-current');
+    });
+    const parcel=scene.querySelector('.pipeline-piece');
+    const stage=frame.stage??0;
+    parcel.hidden=frame.stage===undefined;
+    parcel.style.setProperty('--desktop-x',stage%3);
+    parcel.style.setProperty('--desktop-y',Math.floor(stage/3));
+    parcel.style.setProperty('--mobile-x',stage%2);
+    parcel.style.setProperty('--mobile-y',Math.floor(stage/2));
   }});
   player.set([{message:'Production starts at v1. Push a sample commit to begin.',production,states:pipelineStages.map(()=> 'waiting')}]);
   form.onsubmit=event=>{
@@ -157,12 +225,34 @@ function mountPipeline(root,signal) {
   };
 }
 
+function mountStory(root,key,signal) {
+  const model=systems[key];
+  root.innerHTML=`<form class="live-inputs">
+    <label>${esc(model.label)} <select name="case">${model.options.map(([value,label])=>`<option value="${value}">${esc(label)}</option>`).join('')}</select></label>
+    <button class="button primary" type="submit">${esc(model.action)}</button>
+  </form><div data-player></div>`;
+  const form=root.querySelector('form');
+  const player=createPlayer(root.querySelector('[data-player]'),{signal,
+    draw(scene,frame){drawSystem(scene,frame,model.actors,model.item,key==='jwt');},
+  });
+  const render=autoplay=>{
+    const frames=model.states(form.elements.case.value).map((frame,index)=>({...frame,
+      message:frame.caption,detail:frame.detail||model.initial,
+      account:frame.account??'',position:index,
+    }));
+    player.set(frames,{autoplay});
+  };
+  render(false);
+  form.onsubmit=event=>{event.preventDefault();render(true);};
+}
+
 export function mountSimulation(root,key,signal) {
   const example=liveByKey[key];
   root.innerHTML=`<h2>${esc(example.title)}</h2><p lang="si">${esc(example.si)}</p><div data-live-body></div>`;
   const body=root.querySelector('[data-live-body]');
   if(key==='heap') return mountHeap(body,signal);
   if(key==='pipeline') return mountPipeline(body,signal);
+  if(systems[key]) return mountStory(body,key,signal);
   const inputs=Object.entries(example.inputs);
   body.innerHTML=`<form class="live-inputs">${inputs.map(([name,input])=>`<label>${esc(input.label)}
     ${input.options?`<select name="${name}">${input.options.map(([value,label],i)=>`<option value="${i}" ${value===input.defaultValue?'selected':''}>${esc(label)}</option>`).join('')}</select>`
@@ -216,9 +306,7 @@ export function mountWalkthrough(root,{title,frames,signal,diagram}) {
   <p lang="si">Play හෝ Next step ඔබලා example එක පියවරෙන් පියවර බලන්න.</p>
   ${diagram?`<div class="live-source-figure">${diagram}</div>`:''}<div data-player></div>`;
   const player=createPlayer(root.querySelector('[data-player]'),{signal,draw(scene,frame,index){
-    if(frames.length>7) {
-      scene.innerHTML=`<div class="live-single-step"><span class="label">Step ${index+1}</span><${frame.code?'pre':'p'}>${esc(frame.message)}</${frame.code?'pre':'p'}></div>`;
-    } else drawFrame(scene,frame,frames,index);
+    drawFrame(scene,frame,frames,index);
   }});
   player.set(frames.length?frames:[{message:title}]);
 }
@@ -233,7 +321,7 @@ export function openLive(main,key,from,sourcePage,signal) {
   if(!example) {
     main.innerHTML=`<div class="shell page"><div class="intro"><div class="eyebrow">Practice</div><h1>Live visualizations</h1>
       <p>Change the input, then play or step through the result.</p></div><div class="cards">
-      ${liveCatalog.map(item=>`<a class="card live-card" href="${sectionLink(null,item.key)}"><h3>${esc(item.title)}</h3><p lang="si">${esc(item.si)}</p><span class="topic-open">Open visualization</span></a>`).join('')}
+      ${liveCatalog.map(item=>`<a class="card live-card" href="${sectionLink(null,item.key)}"><div class="live-card-art">${art(item.key==='jwt'||item.key==='offboarding'?'badge':item.key==='pipeline'?'parcel':item.view==='heap'||item.view==='array'?'orb':'gear')}</div><h3>${esc(item.title)}</h3><p lang="si">${esc(item.si)}</p><span class="topic-open">Open visualization</span></a>`).join('')}
     </div></div>`;
     return;
   }

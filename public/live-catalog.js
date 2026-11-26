@@ -8,6 +8,10 @@ const shared = [2,4,6,8,10,12,14];
 const list=[7,2,9,2,4,1];
 
 export const liveCatalog = [
+  {key:'jwt',title:'JWT in motion',si:'Signed token එක browser එක සහ API එක අතර ගමන් කරන හැටි බලන්න.',section:23,
+    match:/\bjwt\b|token expiration and revocation|access and refresh tokens/i,view:'story'},
+  {key:'offboarding',title:'The orphaned account',si:'Employee කෙනෙක් ගියාම ඉතිරි වෙන access එක හඳුනාගෙන disable කරන හැටි බලන්න.',section:23,
+    match:/orphaned account|offboarding|identity lifecycle|least privilege|api keys and service accounts/i,view:'story'},
   {key:'heap',title:'Heap insertion',si:'අලුත් value එක පහළට දාලා parent එක්ක compare කරමින් උඩට යන හැටි බලන්න.',section:3,
     match:/\bheap(?:s|ify)?\b|priority queue/i,view:'heap'},
   {key:'pipeline',title:'CI/CD pipeline',si:'Build, tests, release gate සහ deploy එක හරහා production වෙනස් වෙන හැටි බලන්න.',section:28,
