@@ -1,0 +1,154 @@
+import { editions } from './editions/index.js';
+import { mountEditionDemo } from './edition-demos.js';
+
+export { editions };
+const clean = title => title.toLowerCase().replace(/^\d+\.\s*/,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+
+export function editionPageFor(section, title) {
+  const pages=editions[section];
+  if (!pages||!title) return null;
+  const name=clean(title);
+  const matches=entry=>[entry.title,...entry.headings].map(clean);
+  const exact=pages.findIndex(entry=>matches(entry).includes(name));
+  if (exact>=0) return exact+1;
+  const partial=pages.findIndex(entry=>entry.kind==='Lesson'&&matches(entry).some(value=>value.length>5&&(value.includes(name)||name.includes(value))));
+  return partial>=0?partial+1:null;
+}
+
+const photos = {
+  1: ['keyboard','A wired keyboard with a US layout','Keyboard input becomes data the program can process.','Dingo1234555','https://commons.wikimedia.org/wiki/File:Apple_Keyboard_(A1048).jpg'],
+  15: ['server-racks','Rows of server racks inside a data centre','These servers can host backend processes that handle client requests.','NERSC','https://commons.wikimedia.org/wiki/File:Front_of_server_racks_at_NERSC.jpg'],
+};
+
+function scopedSvg(source,prefix) {
+  return source.replace(/\bid="([^"]+)"/g,(_match,id)=>`id="${prefix}${id}"`)
+    .replace(/(href="#|url\(#)([\w.-]+)/g,(_match,start,id)=>start+prefix+id);
+}
+
+function renderBlocks(blocks,escape,language,practice) {
+  const answerMarkup=text=>practice?
+    `<details class="source-answer"><summary>Reveal source answer</summary><p>${escape(text)}</p></details>`:
+    `<p class="source-answer">${escape(text)}</p>`;
+  let withinQuestion=0;
+  return blocks.map(([type,value,label,width],index)=>{
+    if (type==='diagram') return `<figure class="source-diagram" aria-label="${escape(label)}">${scopedSvg(value,'edition-'+index+'-')}</figure>`;
+    if (type==='sinhala') return language==='en'?'':`<div class="source-sinhala"><img class="edition-sinhala" lang="si" style="--source-width:${Number(width)}px" src="data:image/webp;base64,${value}" alt="${escape(label)}"></div>`;
+    if (type==='code') return `<pre class="edition-code"><code>${escape(value)}</code></pre>`;
+    const question=/^interview questions?\b/i.test(value);
+    const answer=/^answer\s*:/i.test(value);
+    if (withinQuestion===1) {
+      withinQuestion=2;
+      return `<p class="source-question" data-question>${escape(value)}</p>`;
+    }
+    if (withinQuestion===2) {
+      withinQuestion=0;
+      if (!question) return answerMarkup(value);
+    }
+    if (question) {
+      if (/^interview questions?$/i.test(value.trim())) {
+        withinQuestion=1;
+        return `<h3>${escape(value)}</h3>`;
+      }
+      const split=value.search(/\nAnswer\s*:/i);
+      if (split>=0) return `<p class="source-question" data-question>${escape(value.slice(0,split))}</p>${answerMarkup(value.slice(split+1))}`;
+      return `<p class="source-question" data-question>${escape(value)}</p>`;
+    }
+    if (answer) return answerMarkup(value);
+    if (type==='heading'&&value.length<180) return `<h3>${escape(value)}</h3>`;
+    return `<p>${escape(value)}</p>`;
+  }).join('');
+}
+
+export function openEdition(main,item,anchor,{escape,language,progress,record}) {
+  const id=item.id;
+  const pages=editions[id];
+  const pageMatch=/^(?:pdf|demo)-(\d+)(?:-q)?$/.exec(anchor??'');
+  const previousTopic=/^topic-(\d+)$/.exec(anchor??'');
+  const mapped=previousTopic?editionPageFor(id,item.topics[Number(previousTopic[1])]):null;
+  const page=Math.min(Math.max(Number(pageMatch?.[1]??mapped??1),1),pages.length);
+  const entry=pages[page-1];
+  const demo=anchor==='demo'||anchor==='coding-examples'||/^demo-\d+$/.test(anchor??'');
+  const source=`/editions/${id}/source.pdf#page=${page}`;
+  const route=(number)=>`#lesson/${id}/pdf-${number}`;
+  const key='lesson-'+id;
+  const photo=photos[id];
+  main.innerHTML=`<div class="shell page edition-page">
+    <a class="back" href="#library">‹ Study library</a>
+    <div class="intro edition-heading"><span class="label">Section ${String(id).padStart(2,'0')} · PDF teaching edition</span><h1>${escape(item.title)}</h1>
+      <p>${pages.length} source pages · English and Sinhala</p></div>
+    <div class="edition-toolbar">
+      <label for="edition-page-select"><span>Jump to a page</span><select id="edition-page-select">
+        ${pages.map((p,i)=>`<option value="${i+1}" ${i+1===page?'selected':''}>${i+1} · ${escape(p.title)}</option>`).join('')}
+      </select></label>
+      <div class="edition-toolbar-actions">
+        <a class="button ${demo?'':'primary'}" href="${route(page)}">PDF lesson</a>
+        <a class="button ${demo?'primary':''}" href="#lesson/${id}/demo-${page}">Section demo</a>
+        <a class="button" href="${source}" target="_blank" rel="noopener">Open original PDF</a>
+      </div>
+    </div>
+    ${demo?`<section class="panel edition-demo" id="edition-demo"></section>
+      ${photo?`<figure class="edition-photo"><img src="/edition-images/${photo[0]}.webp" alt="${escape(photo[1])}"><figcaption>${escape(photo[2])} <a href="${photo[4]}" target="_blank" rel="noopener">Photo: ${escape(photo[3])}, CC0</a></figcaption></figure>`:''}`
+    :`<section class="edition-reader" aria-label="Source lesson page">
+      <div class="edition-reader-title"><div><span class="label">PDF page ${page} of ${pages.length}</span><h2>${escape(entry.title)}</h2></div>
+      <div class="edition-toolbar-actions">${entry.questions?'<button class="button" id="edition-question">Go to interview question</button>':''}
+      <button class="button" id="edition-zoom" type="button" aria-pressed="false">Enlarge diagrams &amp; Sinhala</button></div></div>
+      <div class="edition-sheet" id="edition-sheet" aria-busy="true"><p role="status">Loading lesson page…</p></div>
+    </section>`}
+    <div class="edition-navigation">
+      <div>${!demo&&page>1?`<a class="button" href="${route(page-1)}">Previous page</a>`:''}
+      ${!demo&&page<pages.length?`<a class="button primary" href="${route(page+1)}">Next page</a>`:''}</div>
+      <button class="button" id="edition-progress" aria-pressed="${Boolean(progress[key])}">${progress[key]?'✓ Studied':'Mark section as studied'}</button>
+    </div>
+  </div>`;
+  main.querySelector('#edition-page-select').onchange=event=>{location.hash=route(event.target.value);};
+  main.querySelector('#edition-progress').onclick=event=>{
+    record(key,!progress[key]);
+    event.target.setAttribute('aria-pressed',String(progress[key]));
+    event.target.textContent=progress[key]?'✓ Studied':'Mark section as studied';
+  };
+  if (demo) {
+    mountEditionDemo(main.querySelector('#edition-demo'),id,escape);
+    return;
+  }
+  const sheet=main.querySelector('#edition-sheet');
+  const zoom=main.querySelector('#edition-zoom');
+  zoom.onclick=()=>{
+    const enlarged=sheet.classList.toggle('edition-enlarged');
+    zoom.setAttribute('aria-pressed',String(enlarged));
+    zoom.textContent=enlarged?'Fit diagrams & Sinhala':'Enlarge diagrams & Sinhala';
+  };
+  const focusQuestion=()=>{
+    const question=sheet.querySelector('[data-question]');
+    if (!question) return;
+    question.tabIndex=-1;
+    question.focus({preventScroll:true});
+    question.scrollIntoView({block:'center'});
+  };
+  const questionButton=main.querySelector('#edition-question');
+  if (questionButton) questionButton.onclick=focusQuestion;
+  fetch(`/editions/${id}/${page}.json`).then(response=>{
+    if (!response.ok) throw new Error('Lesson unavailable');
+    return response.json();
+  }).then(blocks=>{
+    if (!sheet.isConnected) return;
+    sheet.innerHTML=renderBlocks(blocks,escape,language,anchor?.endsWith('-q'));
+    zoom.hidden=!sheet.querySelector('.source-diagram,.source-sinhala');
+    sheet.setAttribute('aria-busy','false');
+    if (anchor?.endsWith('-q')) focusQuestion();
+  }).catch(()=>{
+    if (!sheet.isConnected) return;
+    sheet.setAttribute('aria-busy','false');
+    zoom.hidden=true;
+    sheet.innerHTML=`<p role="alert">The lesson page could not load. <a href="${source}" target="_blank" rel="noopener">Open this page in the original PDF.</a></p>`;
+  });
+}
+
+export function editionQuestionIndex(escape) {
+  return `<details class="panel edition-question-index" open><summary>Questions from the PDF editions</summary>
+    <div class="edition-question-list">${Object.entries(editions).map(([id,pages])=>{
+      const entries=pages.flatMap((entry,i)=>entry.questions?[{entry,page:i+1}]:[]);
+      return `<details><summary>Section ${String(id).padStart(2,'0')} · ${escape(pages[0].title)}</summary><ul>
+        ${entries.map(({entry,page})=>`<li><a href="#lesson/${id}/pdf-${page}-q">${escape(entry.title)} <small>· page ${page}</small></a></li>`).join('')}
+      </ul></details>`;
+    }).join('')}</div></details>`;
+}

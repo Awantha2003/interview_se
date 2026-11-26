@@ -1,3 +1,4 @@
+import { editionQuestionIndex, editions, openEdition } from './edition-reader.js';
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
 import { labs } from './labs.js';
@@ -34,7 +35,7 @@ let progress = read(progressKey,{});
 let language = read('se-prep/language','both');
 let filter = 'All';
 let query = '';
-let flashIndex = 0;
+let flashIndex = 19;
 let revealed = false;
 let syncNote = '';
 let client;
@@ -58,18 +59,27 @@ const renderCards = () => {
     return words.every(word=>normalized.includes(word));
   };
   const results = modules.filter(item => filter === 'All' || group(item.id) === filter || filter === item.priority);
-  const topics = term ? results.flatMap(item=>item.topics.flatMap((title,index)=>
-    matches(title) ? [{item,title,index,exact:normalizeSearch(title)===term}] : []
-  )).sort((a,b)=>Number(b.exact)-Number(a.exact)) : [];
+  const topics = term ? results.flatMap(item=>{
+    const pages=editions[item.id];
+    if (!pages) return item.topics.flatMap((title,index)=>
+      matches(title)?[{item,title,anchor:'topic-'+index,exact:normalizeSearch(title)===term}]:[]);
+    const seen=new Set();
+    return pages.flatMap((entry,index)=>[entry.title,...entry.headings.map(title=>title.replace(/^\d+\.\s+/,''))].flatMap(title=>{
+      const key=normalizeSearch(title);
+      if (!matches(title)||seen.has(key)||['overview','continuation'].includes(entry.kind.toLowerCase())&&title===entry.title) return [];
+      seen.add(key);
+      return [{item,title,anchor:'pdf-'+(index+1),exact:key===term}];
+    }));
+  }).sort((a,b)=>Number(b.exact)-Number(a.exact)) : [];
   if (topics.length) {
-    $('#cards').innerHTML = topics.map(({item,title,index})=>`<a class="card topic-card" href="#lesson/${item.id}/topic-${index}"><span class="tag">${escape(item.title)}</span><h3>${escape(title)}</h3><span class="topic-open">${(comparisons[title.toLowerCase()]||conceptTables[title.toLowerCase()])?'Open comparison':'Open topic'}</span></a>`).join('');
+    $('#cards').innerHTML = topics.map(({item,title,anchor})=>`<a class="card topic-card" href="#lesson/${item.id}/${anchor}"><span class="tag">${escape(item.title)}</span><h3>${escape(title)}</h3><span class="topic-open">${editions[item.id]?'Open PDF lesson':(comparisons[title.toLowerCase()]||conceptTables[title.toLowerCase()])?'Open comparison':'Open topic'}</span></a>`).join('');
     $('#result-count').textContent = topics.length + (topics.length===1?' topic':' topics');
     return;
   }
   const matching = term ? results.filter(item=>matches([item.title,item.question,item.en,item.si,...item.topics].join(' '))) : results;
   $('#cards').innerHTML = matching.length ? matching.map(item => {
     const done = progress['lesson-'+item.id];
-    return `<a class="card" href="#lesson/${item.id}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${escape(item.question)}</p><div class="card-bottom"><span>${item.topics.length ? item.topics.length+' topic explanations' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
+    return `<a class="card" href="#lesson/${item.id}"><div class="card-top"><span class="glyph">${glyphs[item.id-1]}</span><span class="tag ${done?'done':''}">${done?'✓ Studied':item.priority}</span></div><h3>${escape(item.title)}</h3><p>${editions[item.id]?'PDF teaching edition':escape(item.question)}</p><div class="card-bottom"><span>${editions[item.id]?editions[item.id].length+' source pages':item.topics.length ? item.topics.length+' topic explanations' : 'Supplementary lesson'}</span><span>Open lesson</span></div></a>`;
   }).join('') : '<p class="muted">No matching lessons. Try a different search or filter.</p>';
   $('#result-count').textContent = matching.length + ' modules';
 };
@@ -78,7 +88,7 @@ function library() {
     <div class="eyebrow">Full-stack interview prep</div><h1>Learn it.<br><span>Then explain it.</span></h1>
     <p>Follow a diagram, try a real example, and practice explaining it in English or Sinhala. Start with the foundations or search for a topic.</p>
     <div class="actions"><a class="button primary" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Start studying'}</a><a class="button" href="#lab">Open code lab</a></div>
-    </div><a class="hero-example" href="#lesson/1/shared-cart"><span class="label">Try a visual lesson</span><h2>One juice cart.<br>Two screens.</h2><div class="hero-cart"><span>Customer</span><strong>3 juices</strong><span>Cashier</span></div><p>See how changing one object affects both screens.</p><span class="example-link">Walk through the example</span></a></div></section>
+    </div><a class="hero-example" href="#lesson/1"><span class="label">PDF teaching editions</span><h2>Study from<br>the source.</h2><p>Read the original interview questions and diagrams for Sections 01–19. Then try another example to see the theory in action.</p><span class="example-link">Open Programming Fundamentals</span></a></div></section>
     <div class="shell stats">
       <div class="stat"><strong>${modules.length}</strong><span>Study modules</span></div>
       <div class="stat"><strong>EN + සිං</strong><span>Lesson languages</span></div>
@@ -379,10 +389,10 @@ function labView(id) {
 }
 function review() {
   const item = modules[flashIndex];
-  main.innerHTML=`<div class="shell page flash"><div class="intro"><div class="eyebrow">Active recall</div><h1>Flashcards</h1><p>Say your answer aloud, then compare it with the example.</p></div>
-    <section class="panel"><span class="label">${flashIndex+1} / ${modules.length} · ${escape(item.title)}</span><h2>${escape(item.question)}</h2>
+  main.innerHTML=`<div class="shell page flash"><div class="intro"><div class="eyebrow">Active recall</div><h1>Flashcards</h1><p>Say your answer aloud, then compare it with the example.</p></div>${editionQuestionIndex(escape)}
+    <section class="panel"><span class="label">Section ${item.id} · ${escape(item.title)}</span><h2>${escape(item.question)}</h2>
     ${revealed?`<p>${escape(item.answer)}</p>${language==='en'?'':`<p lang="si">${escape(item.si)}</p>`}<p class="muted">${escape(item.recall)}</p>`:''}</section>
-    <div class="actions"><button class="button" id="prev" ${flashIndex===0?'disabled':''}>Previous</button><button class="button primary" id="reveal" aria-expanded="${revealed}">${revealed?'Hide answer':'Reveal answer'}</button><button class="button" id="next" ${flashIndex===modules.length-1?'disabled':''}>Next</button></div>
+    <div class="actions"><button class="button" id="prev" ${flashIndex===19?'disabled':''}>Previous</button><button class="button primary" id="reveal" aria-expanded="${revealed}">${revealed?'Hide answer':'Reveal answer'}</button><button class="button" id="next" ${flashIndex===modules.length-1?'disabled':''}>Next</button></div>
     <div class="actions"><a class="back" href="#lesson/${item.id}">Review the full lesson</a></div></div>`;
   $('#reveal').onclick=()=>{revealed=!revealed;review();$('#reveal').focus();};
   const flip = (step,selector)=>{flashIndex+=step;revealed=false;review();($(selector).disabled?$('#reveal'):$(selector)).focus();};
@@ -454,7 +464,8 @@ function render() {
     if (link.dataset.page===current) link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
-  if (page==='lesson'&&item) lesson(item,anchor);
+  if (page==='lesson'&&item&&editions[item.id]) openEdition(main,item,anchor,{escape,language,progress,record});
+  else if (page==='lesson'&&item) lesson(item,anchor);
   else if (page==='lab') labView(id);
   else if (page==='review') review();
   else library();

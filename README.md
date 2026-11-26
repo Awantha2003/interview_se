@@ -24,3 +24,15 @@ The lab runs JavaScript and SQL inside a worker in an opaque-origin iframe. SQL 
 5. Redeploy, then use **Progress** to request a sign-in link. Guest progress is saved separately on the current device.
 
 The attached internship checklist provides the syllabus. All 34 checklist sections have bilingual worked diagrams, interview answers and memory cues. Supabase access control and retry reliability are additional modules. Every PDF checklist entry has an individual study note. The Foundations modules also have Sinhala topic notes. The first lesson demonstrates shared references with an interactive cart and editable JavaScript.
+
+## PDF teaching editions
+
+Sections 01–19 use the supplied PDF lessons. Study Library search indexes their page titles and numbered headings. Each page keeps an original PDF link for checking the page layout and copy. Vector diagrams are rebuilt as inline SVG, and Sinhala passages use crops of the source text because some embedded fonts lose Sinhala shaping during extraction. Each section also has a browser-based example with its own inputs and output.
+
+To regenerate the static editions, install PyMuPDF and Pillow in a Python environment and run:
+
+```sh
+python scripts/import-editions.py /path/to/attachments
+```
+
+The source directory may contain nested folders and must include the 19 files named `Section_01_…` through `Section_19_…`. Section photos are linked and credited in the reader.
