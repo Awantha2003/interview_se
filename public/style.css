@@ -316,3 +316,66 @@ progress{display:block;width:100%;accent-color:var(--yellow)}
 .edition-enlarged .source-diagram svg{max-width:none;min-width:450px}
 .edition-enlarged .edition-sinhala{width:calc(var(--source-width) * 1.2);max-width:none}
 .edition-reader-title .edition-toolbar-actions{justify-content:flex-start}
+
+.edition-live{display:grid;gap:8px;margin-bottom:10px}
+.live-walkthrough>summary{cursor:pointer;font-weight:700;padding:5px 0}
+.live-walkthrough[open]>summary{margin-bottom:12px}
+.live-topic-links{padding:12px;background:#1e2115;border:1px solid #4b5037;border-radius:8px}
+.live-topic-links .actions{margin-top:6px}
+.live-page-links{display:flex;gap:14px;flex-wrap:wrap}
+.live-card p{font-size:.92rem;margin:5px 0 9px}
+.live-workspace{background:#181a13}
+.live-workspace h2,[id="edition-trace"] h2{margin-bottom:5px}
+.live-inputs,.live-controls{display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin:15px 0}
+.live-inputs label,.live-controls label{display:grid;gap:4px;color:#d3d0bd;font-size:.88rem}
+.live-inputs input,.live-inputs select,.live-controls select{max-width:100%;min-height:44px;background:#11120e;border:1px solid #4d5040;border-radius:6px;padding:7px 9px}
+.live-inputs input{width:140px}
+.live-controls .button,.live-inputs .button{min-height:44px}
+.live-controls .button:disabled{cursor:default}
+.live-scene{border:1px solid #454936;background:#12150f;border-radius:9px;min-height:78px;padding:12px;margin-top:10px}
+.live-progress{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:.85rem;color:var(--muted)}
+.live-progress span{white-space:nowrap}
+.live-progress progress{height:8px}
+.live-message{margin-top:8px;color:#f7e68a;min-height:1.6em;overflow-wrap:anywhere}
+.live-tree{height:245px;position:relative;margin-bottom:12px}
+.live-tree svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.live-tree line{stroke:#818b6a;stroke-width:.55}
+.tree-node{position:absolute;display:grid;place-items:center;transform:translate(-50%,-50%);min-width:29px;min-height:29px;padding:3px;border-radius:50%;border:1px solid #747d60;background:#2b3324;color:#f5f9e7;font:650 clamp(.66rem,2.2vw,.9rem) var(--mono);transition:left .48s ease,top .48s ease,background-color .18s ease}
+.tree-node.is-active,.live-cell.is-active{background:var(--yellow);color:#181507;border-color:var(--yellow)}
+.tree-node.is-visited{background:#354e32;border-color:#9eca80}
+.live-array{display:flex;gap:6px;flex-wrap:wrap}
+.live-cell{display:grid;place-items:center;border:1px solid #545840;background:#24291b;border-radius:5px;padding:5px;min-width:36px;font:600 .86rem var(--mono)}
+.live-cell small{color:inherit;opacity:.72;font-size:.67rem}
+.live-cell.is-outside{opacity:.45}
+.live-output{margin-top:9px}
+.live-output code{color:var(--yellow)}
+.live-flow,.pipeline-grid{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.live-flow{grid-template-columns:repeat(auto-fit,minmax(min(125px,100%),1fr))}
+.live-flow li,.pipeline-grid li{border:1px solid #494d3a;border-radius:6px;background:#222719;padding:9px;overflow-wrap:anywhere}
+.live-flow li.is-current,.pipeline-grid li[aria-current]{border-color:var(--yellow);background:#322d16}
+.live-flow li.is-done,.pipeline-grid li[data-state="passed"]{border-color:#739268}
+.pipeline-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pipeline-grid li{display:grid;gap:3px}
+.pipeline-grid li span{font-size:.82rem;color:#c8c9b6}
+.pipeline-grid li[data-state="failed"]{border-color:#eb927c;background:#40231e}
+.pipeline-grid li[data-state="blocked"] span{color:#aaa390}
+.pipeline-production{margin-bottom:10px;color:#d0d4b9}
+.pipeline-production strong{color:#ffe669;margin-left:5px}
+.live-source-figure{background:#fefefe;border-radius:6px;padding:6px;margin:10px 0;overflow:auto}
+.live-source-figure svg{display:block;max-width:100%;height:auto}
+.live-single-step{padding:5px 8px;white-space:pre-line;overflow-wrap:anywhere}
+.live-single-step pre{margin:0}
+@media(max-width:700px){
+  .header nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .header nav a{padding-inline:4px;font-size:.81rem}
+  .live-tree{height:198px}
+  .live-inputs label,.live-controls label{max-width:100%;min-width:0}
+  .live-flow,.pipeline-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .live-tree:not(.graph-tree) .tree-node{min-width:23px;min-height:23px;padding:1px}
+  .live-workspace{padding:12px}
+  .live-scene{padding:8px}
+  .live-controls .button{padding-inline:8px}
+}
+@media(prefers-reduced-motion:reduce){.tree-node{transition:none}}

@@ -1,3 +1,4 @@
+import { liveLinks, mountWalkthrough, openLive } from './live-visuals.js';
 import { editionQuestionIndex, editions, openEdition } from './edition-reader.js';
 import { checklist } from './checklist.js';
 import { lessons } from './lessons.js';
@@ -43,6 +44,7 @@ let client;
 let account;
 let activeLab;
 let finishRun;
+let pageController;
 let remoteQueue = Promise.resolve();
 let accountVersion = 0;
 const labels = {both:'EN + සිං',en:'EN',si:'සිං'};
@@ -88,7 +90,7 @@ function library() {
   main.innerHTML = `<section class="hero"><div class="shell hero-inner"><div>
     <div class="eyebrow">Full-stack interview prep</div><h1>Learn it.<br><span>Then explain it.</span></h1>
     <p>Follow a diagram, try a real example, and practice explaining it in English or Sinhala. Start with the foundations or search for a topic.</p>
-    <div class="actions"><a class="button primary" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Start studying'}</a><a class="button" href="#lab">Open code lab</a></div>
+    <div class="actions"><a class="button primary" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Start studying'}</a><a class="button" href="#live">Live visualizations</a></div>
     </div><a class="hero-example" href="#lesson/1"><span class="label">PDF teaching editions</span><h2>Study from<br>the source.</h2><p>Read the original interview questions and diagrams for Sections 01–19 and 21–33. Then try another example to see the theory in action.</p><span class="example-link">Open Programming Fundamentals</span></a></div></section>
     <div class="shell stats">
       <div class="stat"><strong>${modules.length}</strong><span>Study modules</span></div>
@@ -207,7 +209,7 @@ function topicDiagram(item,index,title) {
   </figure>`;
 }
 const topicKey = (id,index) => 'topic-'+id+'-'+index;
-function lesson(item, anchor) {
+function lesson(item, anchor, signal) {
   const reviewExamples = ['reverse','merge-sorted','palindrome','brackets','anagram','event','frequency','sets','sql','missing','duplicate-orders','second-largest','html','two-sum','fizzbuzz','prime','factorial','fibonacci','binary'];
   const exercises = item.id===32
     ? reviewExamples.map(id=>labs.find(lab=>lab.id===id))
@@ -222,7 +224,8 @@ function lesson(item, anchor) {
     const si=title==='async/await' ? 'await එක Promise එකේ result එක එනකම් දැනට තියෙන async function එක නවත්වනවා. Promise එක reject වුණොත් catch එකෙන් error එක handle කරන්න.' : starterGuidesSi[item.id-1]?.[index] ?? notes.find(([,name])=>name===title)?.[3];
     const copy=si?langText(guide,si):`<p lang="en">${escape(guide)}</p>`;
     return `<li><details class="topic" id="topic-${index}"><summary><span>${escape(title)}</span><span class="topic-status" aria-hidden="true">${progress[key]?'✓':''}</span></summary>
-      <div class="topic-copy">${copy}${topicDiagram(item,index,title)}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
+      <div class="topic-copy">${copy}${topicDiagram(item,index,title)}<details class="panel live-walkthrough" data-topic-trace="${index}"><summary>Play this example</summary><div></div></details>
+      ${liveLinks(title,item.id)?`<div class="actions">${liveLinks(title,item.id)}</div>`:''}${comparisonTable(title)}${topicCode(item,index,title)}<label class="topic-mark"><input type="checkbox" data-progress="${key}" ${progress[key]?'checked':''}> I can explain this</label></div></details></li>`;
   }).join('');
   main.innerHTML = `<div class="shell page lesson-page"><a class="back" href="#library">‹ Study library</a>
     <div class="intro lesson-intro"><div class="eyebrow">${escape(group(item.id))}</div><h1>${escape(item.title)}</h1><p>${escape(item.question)}</p></div>
@@ -231,6 +234,7 @@ function lesson(item, anchor) {
       <section class="panel walkthrough" id="walkthrough"><span class="label">Worked example</span><h2>${escape(visual.title)}</h2>
         <ol class="flow-steps">${visual.steps.map(([label,en,si],index)=>`<li><div aria-hidden="true" class="step-dot">${index+1}</div><div class="step-body"><h3>${escape(label)}</h3>${langText(en,si)}</div></li>`).join('')}</ol>
       </section>
+      <details class="panel live-walkthrough" data-module-trace><summary>Play the lesson walkthrough</summary><div></div></details>
       <section class="panel" id="explanation"><h2>What’s happening?</h2>${langText(item.en,item.si)}</section>
       ${cart?`<section class="panel prediction"><h2>What will the customer see?</h2><p>The cashier changes the shared cart from 1 to 3. Choose the customer’s quantity, then run the code to check.</p>
       <div class="actions" aria-label="Predict the output"><button class="button" data-guess="1" aria-pressed="false">1 juice</button><button class="button" data-guess="3" aria-pressed="false">3 juices</button></div>
@@ -250,6 +254,20 @@ function lesson(item, anchor) {
       ${exercises.length?`<div class="panel lesson-links"><h2>Try it in code</h2>${exercises.map(lab=>`<a href="#lab/${lab.id}">${escape(lab.name)}</a>`).join('')}</div>`:''}
       <button id="mark-lesson" class="button ${marked?'':'primary'}" aria-pressed="${Boolean(marked)}">${marked?'✓ Studied':'Mark as studied'}</button>
     </aside></div></div>`;
+  const attachTrace=(details,title,steps)=>{
+    details.addEventListener('toggle',()=>{
+      if(details.open&&!details.lastElementChild.firstChild) {
+        mountWalkthrough(details.lastElementChild,{title,signal,frames:steps.map(message=>({message}))});
+      }
+    },{signal});
+  };
+  attachTrace(main.querySelector('[data-module-trace]'),visual.title,visual.steps.map(([label,en,si])=>language==='si'?si:label+' · '+en));
+  main.querySelectorAll('[data-topic-trace]').forEach(details=>{
+    const index=Number(details.dataset.topicTrace);
+    const title=item.topics[index];
+    const steps=(language==='si'&&topicScenariosSi[title.toLowerCase()])||topicScenarios[item.id-1][index];
+    attachTrace(details,title,steps);
+  });
   if (cart) {
     connectCart($('#shared-cart'),langText);
     $('.prediction').addEventListener('click',event=>{
@@ -458,15 +476,19 @@ async function useAccount(user) {
 }
 function render() {
   finishRun?.();
-  const [page,id,anchor]=route();
+  pageController?.abort();
+  pageController=new AbortController();
+  const {signal}=pageController;
+  const [page,id,anchor,sourcePage]=route();
   const item=modules.find(lesson=>String(lesson.id)===id);
-  const current=page==='lesson'&&item?'library':page==='lab'||page==='review'?page:'library';
+  const current=page==='lesson'&&item?'library':page==='lab'||page==='review'||page==='live'?page:'library';
   document.querySelectorAll('nav [data-page]').forEach(link=>{
     if (link.dataset.page===current) link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
-  if (page==='lesson'&&item&&editions[item.id]) openEdition(main,item,anchor,{escape,language,progress,record});
-  else if (page==='lesson'&&item) lesson(item,anchor);
+  if (page==='lesson'&&item&&editions[item.id]) openEdition(main,item,anchor,{escape,language,progress,record,signal});
+  else if (page==='lesson'&&item) lesson(item,anchor,signal);
+  else if (page==='live') openLive(main,id,anchor,sourcePage,signal);
   else if (page==='lab') labView(id);
   else if (page==='review') review();
   else library();

@@ -36,3 +36,9 @@ python scripts/import-editions.py /path/to/attachments
 ```
 
 The source directory may contain nested folders and must include a file named `Section_NN_…pdf` for each edition being imported. Pass `--sections 21 22 23` to import specific sections. Other entries in the existing manifest are preserved. Section photos are linked and credited in the reader.
+
+## Live visualizations
+
+The Live page contains input-driven simulations. Heap insertion moves the inserted node from its leaf toward the root. The CI/CD example traces an in-browser pipeline with build, test, approval and health-check gates. It operates on modeled releases.
+
+Each PDF page offers a guided walkthrough of its worked example, and checklist topics offer the same player for their lesson examples. These walkthroughs step through the supplied study material. The Live catalog lists the simulations that recompute a result when you change an input.

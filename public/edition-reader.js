@@ -1,5 +1,6 @@
 import { editions } from './editions/index.js';
 import { mountEditionDemo } from './edition-demos.js';
+import { liveLinks, mountSectionTrace, mountWalkthrough, sourceSteps } from './live-visuals.js';
 
 export { editions };
 const clean = title => title.toLowerCase().replace(/^\d+\.\s*/,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
@@ -67,7 +68,7 @@ function renderBlocks(blocks,escape,language,practice) {
   }).join('');
 }
 
-export function openEdition(main,item,anchor,{escape,language,progress,record}) {
+export function openEdition(main,item,anchor,{escape,language,progress,record,signal}) {
   const id=item.id;
   const pages=editions[id];
   const pageMatch=/^(?:pdf|demo)-(\d+)(?:-q)?$/.exec(anchor??'');
@@ -80,6 +81,7 @@ export function openEdition(main,item,anchor,{escape,language,progress,record}) 
   const route=(number)=>`#lesson/${id}/pdf-${number}`;
   const key='lesson-'+id;
   const photo=photos[id];
+  const matchingLive=liveLinks(entry.title,id,page);
   main.innerHTML=`<div class="shell page edition-page">
     <a class="back" href="#library">‹ Study library</a>
     <div class="intro edition-heading"><span class="label">Section ${String(id).padStart(2,'0')} · PDF teaching edition</span><h1>${escape(item.title)}</h1>
@@ -100,6 +102,10 @@ export function openEdition(main,item,anchor,{escape,language,progress,record}) 
       <div class="edition-reader-title"><div><span class="label">PDF page ${page} of ${pages.length}</span><h2>${escape(entry.title)}</h2></div>
       <div class="edition-toolbar-actions">${entry.questions?'<button class="button" id="edition-question">Go to interview question</button>':''}
       <button class="button" id="edition-zoom" type="button" aria-pressed="false">Enlarge diagrams &amp; Sinhala</button></div></div>
+      <section class="edition-live">
+        ${matchingLive?`<div class="live-topic-links"><span class="label">Live practice</span><div class="actions">${matchingLive}</div></div>`:''}
+        <details class="panel live-walkthrough"><summary>Play this page’s worked example</summary><div id="edition-trace"></div></details>
+      </section>
       <div class="edition-sheet" id="edition-sheet" aria-busy="true"><p role="status">Loading lesson page…</p></div>
     </section>`}
     <div class="edition-navigation">
@@ -116,6 +122,13 @@ export function openEdition(main,item,anchor,{escape,language,progress,record}) 
   };
   if (demo) {
     mountEditionDemo(main.querySelector('#edition-demo'),id,escape);
+    const trace=document.createElement('details');
+    trace.className='panel live-walkthrough';
+    trace.innerHTML='<summary>Play this section demo step by step</summary><div></div>';
+    main.querySelector('#edition-demo').after(trace);
+    trace.addEventListener('toggle',()=>{
+      if(trace.open&&!trace.lastElementChild.firstChild) mountSectionTrace(trace.lastElementChild,id,signal);
+    },{signal});
     return;
   }
   const sheet=main.querySelector('#edition-sheet');
@@ -140,6 +153,15 @@ export function openEdition(main,item,anchor,{escape,language,progress,record}) 
   }).then(blocks=>{
     if (!sheet.isConnected) return;
     sheet.innerHTML=renderBlocks(blocks,escape,language,anchor?.endsWith('-q'));
+    const trace=main.querySelector('#edition-trace');
+    const figure=blocks.find(([type])=>type==='diagram');
+    const setup=()=>{
+      if(!trace.parentElement.open||trace.firstChild) return;
+      mountWalkthrough(trace,{title:entry.title,frames:sourceSteps(blocks,entry.title),signal,
+        diagram:figure?scopedSvg(figure[1],'trace-source-'):null});
+    };
+    trace.parentElement.addEventListener('toggle',setup,{signal});
+    setup();
     zoom.hidden=!sheet.querySelector('.source-diagram,.source-sinhala');
     sheet.setAttribute('aria-busy','false');
     if (anchor?.endsWith('-q')) focusQuestion();

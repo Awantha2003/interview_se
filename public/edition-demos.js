@@ -153,6 +153,13 @@ const demos = {
 
 };
 
+export function sectionDemo(section) {
+  const demo=demos[section];
+  if (!demo) return null;
+  const [title,en,si,label,choices,run]=demo;
+  return {title,en,si,label,choices,trace:input=>run(input,0)};
+}
+
 export function mountEditionDemo(root,section,escape) {
   const [title,en,si,label,choices,run]=demos[section];
   let count=0;

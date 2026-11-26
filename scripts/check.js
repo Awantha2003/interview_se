@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
+import { heapSeed, heapInsertion, pipelineTrace } from '../public/live-models.js';
+import { liveCatalog } from '../public/live-catalog.js';
 import { labs } from '../public/labs.js';
 import { conceptTables } from '../public/concept-tables.js';
 import { comparisons } from '../public/comparisons.js';
@@ -70,5 +72,31 @@ for (const lab of labs) {
   await self.onmessage({data:{...lab,wasmBinary}});
   assert.equal(messages.filter(item=>item.line).map(item=>item.line).join('\n'),lab.out,lab.name);
   assert.equal(messages.at(-1).done,true);
+}
+for (const [mode,values] of [['min',[2,4,-5,100]],['max',[50,40,90,-5]]]) {
+  let nodes=heapSeed(mode);
+  for (const value of values) {
+    const trace=heapInsertion(nodes,value,mode);
+    assert.equal(trace[0].nodes.at(-1).value,value);
+    const previousCount=nodes.length;
+    nodes=trace.at(-1).nodes;
+    assert.equal(nodes.length,previousCount+1);
+    assert.equal(new Set(nodes.map(node=>node.id)).size,nodes.length);
+    assert.ok(nodes.every(({value},i)=>i===0||(mode==='min'
+      ?nodes[Math.floor((i-1)/2)].value<=value:nodes[Math.floor((i-1)/2)].value>=value)));
+  }
+}
+for (const [outcome,stage] of [['build',1],['test',2],['health',5]]) {
+  const failed=pipelineTrace({outcome}).at(-1);
+  assert.equal(failed.production,'v1');
+  assert.equal(failed.states[stage],'failed');
+}
+const awaiting=pipelineTrace({mode:'manual'}).at(-1);
+assert.equal(awaiting.gate,true);
+assert.equal(awaiting.production,'v1');
+assert.equal(pipelineTrace({mode:'manual',approve:true}).at(-1).production,'v2');
+for (const example of liveCatalog.filter(example=>example.trace)) {
+  const values=Object.fromEntries(Object.entries(example.inputs).map(([key,input])=>[key,input.defaultValue]));
+  assert.ok(example.trace(values).every(frame=>frame.message),example.key);
 }
 console.log(`Verified ${lessons.length} complete module records, ${checklist.reduce((total,item)=>total+item.topics.length,0)} checklist entries and ${labs.length} lab fixtures.`);
