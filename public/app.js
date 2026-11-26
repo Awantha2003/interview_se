@@ -17,6 +17,7 @@ import { topicScenarios, topicScenariosSi } from './topic-scenarios.js';
 import { topicGuides } from './topic-guides.js';
 import { starterGuidesSi } from './topic-guides-si.js';
 import config from './config.js';
+import { openBasics } from './basics-page.js';
 
 const modules = lessons.map(lesson => ({
   ...lesson, ...checklist[lesson.id-1],
@@ -91,7 +92,7 @@ function library() {
   main.innerHTML = `<section class="hero"><div class="shell hero-inner"><div>
     <div class="eyebrow">Full-stack interview prep</div><h1>Learn it.<br><span>Then explain it.</span></h1>
     <p>Follow a diagram, try a real example, and practice explaining it in English or Sinhala. Start with the foundations or search for a topic.</p>
-    <div class="actions"><a class="button primary" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Start studying'}</a><a class="button" href="#live">Live visualizations</a></div>
+    <div class="actions"><a class="button primary" href="#basics">Start with interview basics</a><a class="button" href="#lesson/${(modules.find(item=>!progress['lesson-'+item.id]) ?? modules[0]).id}">${doneCount()?'Continue studying':'Open full lessons'}</a></div>
     </div><a class="hero-example" href="#lesson/1"><span class="label">PDF teaching editions</span><h2>Study from<br>the source.</h2><p>Read the original interview questions and diagrams for Sections 01–19 and 21–33. Then try another example to see the theory in action.</p><span class="example-link">Open Programming Fundamentals</span></a></div></section>
     <div class="shell stats">
       <div class="stat"><strong>${modules.length}</strong><span>Study modules</span></div>
@@ -447,7 +448,7 @@ function labView(id,signal) {
 }
 function review(signal) {
   const item = flashModules[flashIndex];
-  main.innerHTML=`<div class="shell page flash"><div class="intro"><div class="eyebrow">Active recall</div><h1>Flashcards</h1><p>Say your answer aloud, then compare it with the example.</p></div>${editionQuestionIndex(escape)}
+  main.innerHTML=`<div class="shell page flash"><div class="intro"><div class="eyebrow">Active recall</div><h1>Flashcards</h1><p>Say your answer aloud, then compare it with the example.</p><div class="actions"><a class="button" href="#basics">Practice the basics with spaced review</a></div></div>${editionQuestionIndex(escape)}
     <section class="panel"><span class="label">Section ${item.id} · ${escape(item.title)}</span><h2>${escape(item.question)}</h2>
     ${revealed?`<p>${escape(item.answer)}</p>${language==='en'?'':`<p lang="si">${escape(item.si)}</p>`}<p class="muted">${escape(item.recall)}</p>
       <details class="panel live-walkthrough" data-flash-trace>${walkthroughSummary(item.id,"Play the example behind this answer")}<div></div></details>`:''}</section>
@@ -525,7 +526,7 @@ function render() {
   const {signal}=pageController;
   const [page,id,anchor,sourcePage]=route();
   const item=modules.find(lesson=>String(lesson.id)===id);
-  const current=page==='lesson'&&item?'library':page==='lab'||page==='review'||page==='live'?page:'library';
+  const current=['basics','lab','review','live'].includes(page)?page:'library';
   document.querySelectorAll('nav [data-page]').forEach(link=>{
     if (link.dataset.page===current) link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
@@ -535,6 +536,7 @@ function render() {
   else if (page==='live') openLive(main,id,anchor,sourcePage,signal);
   else if (page==='lab') labView(id,signal);
   else if (page==='review') review(signal);
+  else if (page==='basics') openBasics(main,id,anchor,{escape,language,signal,read,write,progressKey});
   else library();
 }
 $('#language').textContent=labels[language];

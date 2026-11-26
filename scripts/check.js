@@ -6,6 +6,8 @@ import { heapSeed, heapInsertion, pipelineTrace } from '../public/live-models.js
 import { liveCatalog } from '../public/live-catalog.js';
 import { editions } from '../public/editions/index.js';
 import { sourceClips } from '../public/live-lessons.js';
+import { basicGroups, basicQuestions, practiceLinks, starterQuestions } from '../public/interview-basics.js';
+import { mockQuestions, reviewQueue, scheduleReview } from '../public/basics-review.js';
 import { labs } from '../public/labs.js';
 import { conceptTables } from '../public/concept-tables.js';
 import { comparisons } from '../public/comparisons.js';
@@ -101,6 +103,30 @@ for (const example of liveCatalog.filter(example=>example.trace)) {
   const values=Object.fromEntries(Object.entries(example.inputs).map(([key,input])=>[key,input.defaultValue]));
   assert.ok(example.trace(values).every(frame=>frame.message),example.key);
 }
+const basicIds=new Set(basicQuestions.map(question=>question.id));
+assert.equal(basicIds.size,basicQuestions.length);
+assert.ok(basicQuestions.every(question=>Object.values(question).every(Boolean)&&/[\u0d80-\u0dff]/.test(question.sinhala)));
+assert.equal(new Set(starterQuestions).size,12);
+assert.ok(starterQuestions.every(id=>basicIds.has(id)));
+for(const [id,href] of Object.entries(practiceLinks)) {
+  const [route,key]=href.slice(1).split('/');
+  assert.ok(basicIds.has(id));
+  assert.ok(route==='live'?liveCatalog.some(item=>item.key===key):route==='lab'&&labs.some(lab=>lab.id===key),href);
+}
+const mock=mockQuestions(basicGroups,5,()=>0);
+assert.equal(new Set(mock.map(id=>basicQuestions.find(question=>question.id===id).group)).size,5);
+const day=24*60*60*1000;
+assert.equal(scheduleReview(undefined,'again',0).due,600000);
+assert.equal(scheduleReview(undefined,'unsure',0).due,day);
+let nextReview;
+for(const interval of [1,3,7,14,30,30]){
+  nextReview=scheduleReview(nextReview,'solid',0);
+  assert.equal(nextReview.due,interval*day);
+}
+const history={late:scheduleReview(undefined,'unsure',0),soon:scheduleReview(undefined,'again',0)};
+assert.deepEqual(reviewQueue(['unknown','late','soon'],history,599999),[]);
+assert.deepEqual(reviewQueue(['unknown','late','soon'],history,day),['soon','late']);
+console.log(`Verified ${basicQuestions.length} interview questions, related practice links and review scheduling.`);
 let pages=0;
 let diagrams=0;
 for(const [section,entries] of Object.entries(editions)) {
